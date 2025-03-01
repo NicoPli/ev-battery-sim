@@ -142,34 +142,34 @@ export default function Home() {
         <div className="lg:col-span-2">
           <div className="mb-6">
           {/* Key Stats Section */}
-          <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+          <div className="p-4 rounded-lg shadow-md mb-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm text-gray-500">Elapsed Time</p>
+                <p className="text-sm">Elapsed Time</p>
                 <p className="text-2xl font-bold">
                   {formatTime(simulation.elapsedTime)}
                 </p>
               </div>
               
               <div>
-                <p className="text-sm text-gray-500">State of Charge</p>
+                <p className="text-sm">State of Charge</p>
                 <p className="text-2xl font-bold">
                   {batteryPack.averageSoc.toFixed(1)}%
                 </p>
               </div>
               
               <div>
-                <p className="text-sm text-gray-500">Current Power</p>
+                <p className="text-sm">Current Power</p>
                 <p className="text-2xl font-bold">
                   {latestDataPoint ? latestDataPoint.power.toFixed(1) : "0"} kW
                 </p>
               </div>
               
               <div>
-                <p className="text-sm text-gray-500">Temperature</p>
+                <p className="text-sm">Temperature</p>
                 <p className="text-2xl font-bold">
                   {batteryPack.averageTemperature.toFixed(1)}°C
-                  <span className="text-sm text-gray-500 ml-1">
+                  <span className="text-sm ml-1">
                     (Max: {batteryPack.maxTemperature.toFixed(1)}°C)
                   </span>
                 </p>

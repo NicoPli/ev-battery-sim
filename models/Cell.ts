@@ -14,8 +14,8 @@ export class Cell {
     // Add randomness to initial state of charge (±5%)
     this._stateOfCharge = initialSoc * (0.95 + Math.random() * 0.1);
     
-    // Add randomness to cell capacity (±10%)
-    this._capacity = capacity * (0.9 + Math.random() * 0.2);
+    // Use exact capacity without randomness
+    this._capacity = capacity;
     
     // Initialize charge based on state of charge
     this._charge = this._stateOfCharge * this._capacity;

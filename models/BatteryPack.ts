@@ -36,8 +36,9 @@ export class BatteryPack {
     // Calculate how many parallel strings we can have
     const parallelStrings = Math.max(1, Math.floor(moduleCount / modulesInSeries));
     
-    // For 800V, we need to double the cells in parallel to maintain the same energy capacity
-    const cellsInParallel = systemVoltage === 400 ? 8 : 8; // Same for both voltages
+    // For 800V, we need to double the cells in series but maintain the same energy capacity
+    // by adjusting the number of cells in parallel
+    const cellsInParallel = systemVoltage === 400 ? 8 : 4; // Half the parallel cells for 800V to maintain same capacity
     
     // Create the modules in the correct configuration
     for (let p = 0; p < parallelStrings; p++) {

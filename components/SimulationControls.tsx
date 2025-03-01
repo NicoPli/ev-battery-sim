@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Cell } from '../models/Cell';
 
 export type SimulationConfig = {
   systemVoltage: number;
@@ -32,8 +33,52 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
   const [chargerType, setChargerType] = useState<'Supercharger' | 'Standard CCS'>('Supercharger');
   const [maxCRate, setMaxCRate] = useState<number>(2);
   const [coolingPower, setCoolingPower] = useState<number>(5);
-  const [moduleCount, setModuleCount] = useState<number>(24);
+  const [batterySize, setBatterySize] = useState<number>(80); // Store battery size in kWh
   const [maxCarPower, setMaxCarPower] = useState<number | null>(null);
+  
+  // Get cell properties dynamically
+  const [cellProps, setCellProps] = useState({
+    voltage: 3.7,
+    capacity: 10
+  });
+  
+  useEffect(() => {
+    // Create a sample cell to get its properties
+    const sampleCell = new Cell();
+    setCellProps({
+      voltage: sampleCell.voltage, // This will use the getter
+      capacity: sampleCell.capacity
+    });
+  }, []);
+  
+  // Calculate module count based on battery size and voltage
+  const calculateModuleCount = (capacityKWh: number, voltage: number) => {
+    // Use dynamically fetched cell properties
+    const cellVoltage = cellProps.voltage;
+    const cellCapacity = cellProps.capacity;
+    const cellsPerModule = voltage === 400 ? 108 : 216;
+    
+    // Calculate total energy in Wh
+    const totalWh = capacityKWh * 1000;
+    
+    // Calculate how many modules we need
+    const moduleEnergy = cellsPerModule * cellVoltage * cellCapacity; // Wh per module
+    const moduleCount = Math.round(totalWh / moduleEnergy);
+    
+    return Math.max(4, Math.min(32, moduleCount)); // Clamp between 4 and 32 modules
+  };
+  
+  // Get the current module count based on selected battery size and voltage
+  const moduleCount = calculateModuleCount(batterySize, systemVoltage);
+  
+  // Battery size options in kWh
+  const batterySizeOptions = [40, 60, 80, 100, 120, 150, 200];
+  
+  // Handle voltage change - keep the same kWh but recalculate modules
+  const handleVoltageChange = (newVoltage: number) => {
+    setSystemVoltage(newVoltage);
+    // No need to change batterySize, moduleCount will be recalculated
+  };
   
   // Handle start button click - apply settings and start simulation
   const handleStart = () => {
@@ -43,7 +88,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       chargerType,
       maxCRate,
       coolingPower,
-      moduleCount,
+      moduleCount, // Use calculated module count
       maxCarPower
     });
     
@@ -52,32 +97,20 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
   };
   
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="p-6 rounded-lg shadow-md">
       <h2 className="text-xl font-semibold mb-4">Simulation Controls</h2>
       
       {/* Control buttons */}
       <div className="flex gap-2 mb-6">
         <button
-          onClick={handleStart}
-          disabled={isRunning}
+          onClick={isRunning ? onStop : handleStart}
           className={`px-4 py-2 rounded ${
             isRunning
-              ? 'bg-gray-300 cursor-not-allowed'
+              ? 'bg-red-500 text-white hover:bg-red-600'
               : 'bg-green-500 text-white hover:bg-green-600'
           }`}
         >
-          Start
-        </button>
-        <button
-          onClick={onStop}
-          disabled={!isRunning}
-          className={`px-4 py-2 rounded ${
-            !isRunning
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-red-500 text-white hover:bg-red-600'
-          }`}
-        >
-          Stop
+          {isRunning ? 'Stop' : 'Start'}
         </button>
         <button
           onClick={onReset}
@@ -89,7 +122,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       
       {/* Time Acceleration control */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium mb-1">
           Time Acceleration: {timeAcceleration}x
         </label>
         <input
@@ -106,26 +139,26 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       
       {/* System Voltage */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium mb-1">
           System Voltage
         </label>
         <div className="flex gap-2">
           <button
-            onClick={() => setSystemVoltage(400)}
+            onClick={() => handleVoltageChange(400)}
             className={`flex-1 px-3 py-1 rounded ${
               systemVoltage === 400
                 ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'
+                : 'bg-gray-200 hover:bg-gray-300 text-black'
             }`}
           >
             400V
           </button>
           <button
-            onClick={() => setSystemVoltage(800)}
+            onClick={() => handleVoltageChange(800)}
             className={`flex-1 px-3 py-1 rounded ${
               systemVoltage === 800
                 ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'
+                : 'bg-gray-200 hover:bg-gray-300 text-black'
             }`}
           >
             800V
@@ -135,7 +168,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       
       {/* Charger Type */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium mb-1">
           Charger Type
         </label>
         <div className="flex gap-2">
@@ -144,7 +177,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
             className={`flex-1 px-3 py-1 rounded ${
               chargerType === 'Supercharger'
                 ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'
+                : 'bg-gray-200 hover:bg-gray-300 text-black'
             }`}
           >
             Supercharger
@@ -154,7 +187,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
             className={`flex-1 px-3 py-1 rounded ${
               chargerType === 'Standard CCS'
                 ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'
+                : 'bg-gray-200 hover:bg-gray-300 text-black'
             }`}
           >
             Standard CCS
@@ -162,9 +195,27 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
         </div>
       </div>
       
+      {/* Battery Size dropdown */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">
+          Battery Size ({batterySize} kWh, {moduleCount} modules)
+        </label>
+        <select 
+          className="w-full p-2 border border-gray-300 rounded"
+          value={batterySize}
+          onChange={(e) => setBatterySize(Number(e.target.value))}
+        >
+          {batterySizeOptions.map(size => (
+            <option key={size} value={size}>
+              {size} kWh
+            </option>
+          ))}
+        </select>
+      </div>
+      
       {/* Max C-Rate */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium mb-1">
           Max C-Rate: {maxCRate}C
         </label>
         <input
@@ -180,7 +231,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       
       {/* Cooling Power */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium mb-1">
           Cooling Power: {coolingPower}x
         </label>
         <input
@@ -194,25 +245,9 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
         />
       </div>
       
-      {/* Module Count */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Module Count: {moduleCount}
-        </label>
-        <input
-          type="range"
-          min="4"
-          max="32"
-          step="4"
-          value={moduleCount}
-          onChange={(e) => setModuleCount(Number(e.target.value))}
-          className="w-full"
-        />
-      </div>
-      
       {/* Max Car Power */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium mb-1">
           Max Car Power (kW): {maxCarPower === null ? 'Unlimited' : maxCarPower}
         </label>
         <input

@@ -15,14 +15,14 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) =>
 
   // More robust check for batteryPack and its properties
   if (!batteryPack) {
-    return <div className="bg-white p-6 rounded-lg shadow-md">Loading battery data...</div>;
+    return <div className="p-6 rounded-lg shadow-md">Loading battery data...</div>;
   }
 
   // Safely access modules with optional chaining
   const modules = batteryPack?.modules || [];
   
   if (modules.length === 0) {
-    return <div className="bg-white p-6 rounded-lg shadow-md">No battery modules available</div>;
+    return <div className="p-6 rounded-lg shadow-md">No battery modules available</div>;
   }
 
   const getTemperatureColor = (temp: number): string => {
@@ -62,17 +62,17 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) =>
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="p-6 rounded-lg shadow-md">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-xl font-semibold">Battery Visualization</h2>
         <button
           onClick={toggleViewMode} 
-          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-black"
         >
           Switch to {viewMode === 'temperature' ? 'Voltage' : 'Temperature'} View
         </button>
       </div>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm mb-4">
         Showing {viewMode === 'temperature' ? 'temperature' : 'state of charge'} distribution
       </p>
       

@@ -130,7 +130,7 @@ const ChargingChart: React.FC<ChargingChartProps> = ({ dataPoints }) => {
   }, [dataPoints, updateCounter]); // Re-run when dataPoints or updateCounter changes
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
+    <div className="p-4 rounded-lg shadow-md">
       <h2 className="text-xl font-bold mb-4">Charging Curve</h2>
       <div className="w-full h-80">
         <canvas ref={chartRef} />

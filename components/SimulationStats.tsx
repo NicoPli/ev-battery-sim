@@ -8,7 +8,7 @@ type SimulationStatsProps = {
 const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
   // Skip rendering if simulation or batteryPack is not available
   if (!simulation || !simulation.batteryPack) {
-    return <div className="bg-white p-6 rounded-lg shadow-md">Loading simulation data...</div>;
+    return <div className="p-6 rounded-lg shadow-md">Loading simulation data...</div>;
   }
   
   const formatVoltage = (voltage: number | undefined): string => {
@@ -47,37 +47,37 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
   };
   
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="p-6 rounded-lg shadow-md">
       <h2 className="text-xl font-semibold mb-4">Battery Details</h2>
       
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-sm text-gray-500">Battery Size</p>
+          <p className="text-sm">Battery Size</p>
           <p className="text-2xl font-bold">{batterySizeKWh.toFixed(1)} kWh</p>
         </div>
         
         <div>
-          <p className="text-sm text-gray-500">Battery Configuration</p>
+          <p className="text-sm">Battery Configuration</p>
           <p className="text-lg font-bold">{cellsInSeries}S{cellsInParallel}P ({totalCells} cells)</p>
         </div>
         
         <div>
-          <p className="text-sm text-gray-500">Battery Voltage</p>
+          <p className="text-sm">Battery Voltage</p>
           <p className="text-2xl font-bold">{simulation.batteryPack.totalVoltage.toFixed(1)} V</p>
         </div>
         
         <div>
-          <p className="text-sm text-gray-500">Current</p>
+          <p className="text-sm">Current</p>
           <p className="text-2xl font-bold">{currentAmps.toFixed(1)} A</p>
         </div>
         
         <div>
-          <p className="text-sm text-gray-500">Charging Limited By</p>
+          <p className="text-sm">Charging Limited By</p>
           <p className="text-xl font-bold">{getLimitingFactor()}</p>
         </div>
         
         <div>
-          <p className="text-sm text-gray-500">Cell Voltage Range</p>
+          <p className="text-sm">Cell Voltage Range</p>
           <p className="text-lg font-bold">
             {batteryPack && batteryPack.minCellVoltage !== undefined 
               ? formatVoltage(batteryPack.minCellVoltage) 
@@ -86,7 +86,7 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
               ? formatVoltage(batteryPack.maxCellVoltage) 
               : "N/A"} V
             {batteryPack && batteryPack.voltageDifference !== undefined && (
-              <span className="text-sm text-gray-500 ml-1">
+              <span className="text-sm ml-1">
                 (Δ{formatVoltage(batteryPack.voltageDifference)} V)
               </span>
             )}
