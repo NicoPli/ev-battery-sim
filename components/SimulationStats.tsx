@@ -21,14 +21,6 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
       .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
-  const formatPower = (power: number): string => {
-    return power.toFixed(1);
-  };
-  
-  const formatTemperature = (temp: number): string => {
-    return temp.toFixed(1);
-  };
-  
   const formatVoltage = (voltage: number | undefined): string => {
     return voltage !== undefined ? voltage.toFixed(2) : "N/A";
   };
@@ -41,17 +33,8 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
     ? simulation.dataPoints[simulation.dataPoints.length - 1] 
     : null;
   
-  // Calculate current power
-  const currentPower = latestDataPoint ? latestDataPoint.power : 0;
-  
   // Calculate current in Amps
   const currentAmps = latestDataPoint ? latestDataPoint.current : 0;
-  
-  // Calculate average temperature
-  const avgTemperature = batteryPack.averageTemperature;
-  
-  // Calculate max temperature
-  const maxTemperature = batteryPack.maxTemperature;
   
   // Calculate battery size in kWh
   const batteryCapacity = batteryPack.totalCapacity; // Ah
@@ -75,22 +58,17 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
   
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-4">Simulation Statistics</h2>
+      <h2 className="text-xl font-semibold mb-4">Battery Details</h2>
       
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-sm text-gray-500">Elapsed Time</p>
-          <p className="text-2xl font-bold">{formatTime(simulation.elapsedTime)}</p>
-        </div>
-        
-        <div>
-          <p className="text-sm text-gray-500">State of Charge</p>
-          <p className="text-2xl font-bold">{simulation.batteryPack.averageSoc.toFixed(1)}%</p>
-        </div>
-        
-        <div>
           <p className="text-sm text-gray-500">Battery Size</p>
           <p className="text-2xl font-bold">{batterySizeKWh.toFixed(1)} kWh</p>
+        </div>
+        
+        <div>
+          <p className="text-sm text-gray-500">Battery Configuration</p>
+          <p className="text-lg font-bold">{cellsInSeries}S{cellsInParallel}P ({totalCells} cells)</p>
         </div>
         
         <div>
@@ -99,32 +77,8 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
         </div>
         
         <div>
-          <p className="text-sm text-gray-500">Current Power</p>
-          <p className="text-2xl font-bold">{formatPower(currentPower)} kW</p>
-        </div>
-        
-        <div>
           <p className="text-sm text-gray-500">Current</p>
           <p className="text-2xl font-bold">{currentAmps.toFixed(1)} A</p>
-        </div>
-        
-        <div>
-          <p className="text-sm text-gray-500">Avg Temperature</p>
-          <p className="text-2xl font-bold">{formatTemperature(avgTemperature)} °C</p>
-        </div>
-        
-        <div>
-          <p className="text-sm text-gray-500">Max Temperature</p>
-          <p className={`text-2xl font-bold ${
-            maxTemperature > 45 ? 'text-red-500' : ''
-          }`}>
-            {formatTemperature(maxTemperature)} °C
-          </p>
-        </div>
-        
-        <div>
-          <p className="text-sm text-gray-500">Battery Configuration</p>
-          <p className="text-lg font-bold">{cellsInSeries}S{cellsInParallel}P ({totalCells} cells)</p>
         </div>
         
         <div>

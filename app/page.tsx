@@ -115,6 +115,12 @@ export default function Home() {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
+  // Extract key stats for the top section
+  const batteryPack = simulation.batteryPack;
+  const latestDataPoint = simulation.dataPoints && simulation.dataPoints.length > 0 
+    ? simulation.dataPoints[simulation.dataPoints.length - 1] 
+    : null;
+  
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">EV Battery Charging Simulator</h1>
@@ -130,16 +136,59 @@ export default function Home() {
             timeAcceleration={timeAcceleration}
             onTimeAccelerationChange={handleTimeAccelerationChange}
           />
+        </div>
+        
+        <div className="lg:col-span-2">
+          {/* Key Stats Section */}
+          <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Elapsed Time</p>
+                <p className="text-2xl font-bold">
+                  {formatTime(simulation.elapsedTime)}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">State of Charge</p>
+                <p className="text-2xl font-bold">
+                  {batteryPack.averageSoc.toFixed(1)}%
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">Current Power</p>
+                <p className="text-2xl font-bold">
+                  {latestDataPoint ? latestDataPoint.power.toFixed(1) : "0"} kW
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">Temperature</p>
+                <p className="text-2xl font-bold">
+                  {batteryPack.averageTemperature.toFixed(1)}°C
+                  <span className="text-sm text-gray-500 ml-1">
+                    (Max: {batteryPack.maxTemperature.toFixed(1)}°C)
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
           
+          {/* Chart Section */}
+          {simulation && simulation.dataPoints && simulation.dataPoints.length > 0 && (
+            <ChargingChart dataPoints={simulation.dataPoints} />
+          )}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div className="lg:col-span-1">
           {simulation && <SimulationStats simulation={simulation} />}
         </div>
         
         <div className="lg:col-span-2">
-          {simulation && simulation.dataPoints && simulation.dataPoints.length > 0 && (
-            <ChargingChart dataPoints={simulation.dataPoints} />
-          )}
-          
-          <div className="mt-6 flex justify-end">
+          <div className="flex justify-end mb-2">
             <button
               onClick={toggleViewMode}
               className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
@@ -158,4 +207,14 @@ export default function Home() {
       </div>
     </div>
   );
+}
+
+// Helper function to format time
+function formatTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes
+    .toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
