@@ -6,6 +6,11 @@ interface BatteryVisualizerProps {
   viewMode: 'temperature' | 'voltage';
 }
 
+interface BatteryCell {
+  temperature?: number;
+  stateOfCharge?: number;
+}
+
 const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack, viewMode }) => {
   // More robust check for batteryPack and its properties
   if (!batteryPack) {
@@ -44,7 +49,7 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack, view
   const modulesPerRow = Math.min(6, modules.length);
   
   // Group modules into rows
-  const moduleRows: Array<Array<any>> = [];
+  const moduleRows: Array<Array<typeof modules[0]>> = [];
   const modulesCopy = [...modules];
   
   while (modulesCopy.length > 0) {
@@ -79,7 +84,7 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack, view
                   <div className="grid gap-0.5" style={{ 
                     gridTemplateColumns: `repeat(${cellsPerRow || 1}, minmax(0, 1fr))` 
                   }}>
-                    {cells.map((cell: any, cellIndex: number) => (
+                    {cells.map((cell: BatteryCell, cellIndex: number) => (
                       <div
                         key={cellIndex}
                         className={`w-2 h-2 rounded-sm ${

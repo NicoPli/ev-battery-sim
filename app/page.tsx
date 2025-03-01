@@ -12,7 +12,6 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<'temperature' | 'voltage'>('temperature');
   const [simulation, setSimulation] = useState<ChargingSimulation | null>(null);
   const [timeAcceleration, setTimeAcceleration] = useState(10);
-  const [forceUpdate, setForceUpdate] = useState(0); // Use this to force re-renders
   
   // Use a ref to store the actual simulation instance
   const simulationRef = useRef<ChargingSimulation | null>(null);
@@ -46,9 +45,6 @@ export default function Home() {
   // Force re-render every second to update UI
   useEffect(() => {
     const interval = setInterval(() => {
-      // Just trigger a re-render without modifying the simulation object
-      setForceUpdate(prev => prev + 1);
-      
       // If we have a simulation and it's running, force update the chart data
       if (simulationRef.current) {
         // Create a shallow copy of the simulation to force a re-render
@@ -94,27 +90,21 @@ export default function Home() {
     
     setTimeAcceleration(acceleration);
     simulationRef.current.setTimeAcceleration(acceleration);
-    
-    // Force update
-    setForceUpdate(prev => prev + 1);
   };
   
   const handleStart = () => {
     if (!simulationRef.current) return;
     simulationRef.current.start();
-    setForceUpdate(prev => prev + 1);
   };
   
   const handleStop = () => {
     if (!simulationRef.current) return;
     simulationRef.current.stop();
-    setForceUpdate(prev => prev + 1);
   };
   
   const handleReset = () => {
     if (!simulationRef.current) return;
     simulationRef.current.reset();
-    setForceUpdate(prev => prev + 1);
   };
   
   const toggleViewMode = () => {
