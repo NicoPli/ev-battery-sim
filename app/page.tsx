@@ -1,101 +1,168 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import SimulationControls, { SimulationConfig } from '../components/SimulationControls';
+import BatteryVisualizer from '../components/BatteryVisualizer';
+import ChargingChart from '../components/ChargingChart';
+import SimulationStats from '../components/SimulationStats';
+import { BatteryPack } from '../models/BatteryPack';
+import { ChargingSimulation } from '../models/ChargingSimulation';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [viewMode, setViewMode] = useState<'temperature' | 'voltage'>('temperature');
+  const [simulation, setSimulation] = useState<ChargingSimulation | null>(null);
+  const [timeAcceleration, setTimeAcceleration] = useState(10);
+  const [forceUpdate, setForceUpdate] = useState(0); // Use this to force re-renders
+  
+  // Use a ref to store the actual simulation instance
+  const simulationRef = useRef<ChargingSimulation | null>(null);
+  
+  // Initialize simulation with default values
+  useEffect(() => {
+    const defaultConfig: SimulationConfig = {
+      systemVoltage: 400,
+      chargerType: 'Supercharger',
+      maxCRate: 2,
+      coolingPower: 1,
+      moduleCount: 24,
+      maxCarPower: null
+    };
+    
+    const batteryPack = new BatteryPack(
+      defaultConfig.moduleCount,
+      defaultConfig.systemVoltage,
+      defaultConfig.maxCRate,
+      defaultConfig.coolingPower,
+      defaultConfig.maxCarPower
+    );
+    
+    const sim = new ChargingSimulation(batteryPack, defaultConfig.chargerType);
+    sim.setTimeAcceleration(timeAcceleration);
+    
+    simulationRef.current = sim;
+    setSimulation(sim);
+  }, []);
+  
+  // Force re-render every second to update UI
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Just trigger a re-render without modifying the simulation object
+      setForceUpdate(prev => prev + 1);
+      
+      // If we have a simulation and it's running, force update the chart data
+      if (simulationRef.current && simulationRef.current.isRunning) {
+        // Create a shallow copy of the data points to force a re-render of the chart
+        const updatedSimulation = { ...simulationRef.current };
+        setSimulation(updatedSimulation);
+      }
+    }, 100); // Update more frequently (every 100ms)
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  const handleConfigChange = (config: SimulationConfig) => {
+    if (!simulationRef.current) return;
+    
+    // Stop simulation if running
+    if (simulationRef.current.isRunning) {
+      simulationRef.current.stop();
+    }
+    
+    // Create new battery pack with updated config
+    const batteryPack = new BatteryPack(
+      config.moduleCount,
+      config.systemVoltage, 
+      config.maxCRate,
+      config.coolingPower,
+      config.maxCarPower
+    );
+    
+    // Create new simulation with updated battery pack
+    const newSimulation = new ChargingSimulation(batteryPack, config.chargerType);
+    newSimulation.setTimeAcceleration(timeAcceleration);
+    
+    // Update both the ref and the state
+    simulationRef.current = newSimulation;
+    setSimulation(newSimulation);
+  };
+  
+  const handleTimeAccelerationChange = (acceleration: number) => {
+    if (!simulationRef.current) return;
+    
+    setTimeAcceleration(acceleration);
+    simulationRef.current.setTimeAcceleration(acceleration);
+    
+    // Force update
+    setForceUpdate(prev => prev + 1);
+  };
+  
+  const handleStart = () => {
+    if (!simulationRef.current) return;
+    simulationRef.current.start();
+    setForceUpdate(prev => prev + 1);
+  };
+  
+  const handleStop = () => {
+    if (!simulationRef.current) return;
+    simulationRef.current.stop();
+    setForceUpdate(prev => prev + 1);
+  };
+  
+  const handleReset = () => {
+    if (!simulationRef.current) return;
+    simulationRef.current.reset();
+    setForceUpdate(prev => prev + 1);
+  };
+  
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'temperature' ? 'voltage' : 'temperature');
+  };
+  
+  if (!simulation) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6">EV Battery Charging Simulator</h1>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <SimulationControls
+            onStart={handleStart}
+            onStop={handleStop}
+            onReset={handleReset}
+            onConfigChange={handleConfigChange}
+            isRunning={simulation?.isRunning || false}
+            timeAcceleration={timeAcceleration}
+            onTimeAccelerationChange={handleTimeAccelerationChange}
+          />
+          
+          {simulation && <SimulationStats simulation={simulation} />}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        
+        <div className="lg:col-span-2">
+          {simulation && simulation.dataPoints.length > 0 && (
+            <ChargingChart dataPoints={simulation.dataPoints} />
+          )}
+          
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={toggleViewMode}
+              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            >
+              Switch to {viewMode === 'temperature' ? 'Voltage' : 'Temperature'} View
+            </button>
+          </div>
+          
+          {simulation && simulation.batteryPack && (
+            <BatteryVisualizer
+              batteryPack={simulation.batteryPack}
+              viewMode={viewMode}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
