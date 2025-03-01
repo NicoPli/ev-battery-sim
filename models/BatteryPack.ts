@@ -240,4 +240,9 @@ export class BatteryPack {
   get voltageDifference(): number {
     return this.maxCellVoltage - this.minCellVoltage;
   }
+
+  // Add a public getter for systemVoltage
+  get systemVoltage(): number {
+    return this._systemVoltage;
+  }
 } 

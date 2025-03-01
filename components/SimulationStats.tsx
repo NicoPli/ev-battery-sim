@@ -55,14 +55,14 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
   
   // Calculate battery size in kWh
   const batteryCapacity = batteryPack.totalCapacity; // Ah
-  const systemVoltage = batteryPack._systemVoltage; // 400V or 800V
+  const systemVoltage = batteryPack.systemVoltage; // Use the public getter instead of private property
   const batterySizeKWh = (batteryCapacity * systemVoltage) / 1000;
   
   // Calculate total number of cells
   const totalCells = batteryPack.cells ? batteryPack.cells.length : 0;
   
   // Calculate cells in series
-  const cellsInSeries = batteryPack._systemVoltage === 400 ? 108 : 216;
+  const cellsInSeries = batteryPack.systemVoltage === 400 ? 108 : 216; // Use the public getter here too
   
   // Calculate cells in parallel
   const cellsInParallel = Math.floor(totalCells / cellsInSeries);
