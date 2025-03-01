@@ -10,16 +10,6 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
   if (!simulation || !simulation.batteryPack) {
     return <div className="bg-white p-6 rounded-lg shadow-md">Loading simulation data...</div>;
   }
-
-  const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes
-      .toString()
-      .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
   
   const formatVoltage = (voltage: number | undefined): string => {
     return voltage !== undefined ? voltage.toFixed(2) : "N/A";

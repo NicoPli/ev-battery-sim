@@ -9,7 +9,6 @@ import { BatteryPack } from '../models/BatteryPack';
 import { ChargingSimulation } from '../models/ChargingSimulation';
 
 export default function Home() {
-  const [viewMode, setViewMode] = useState<'temperature' | 'voltage'>('temperature');
   const [simulation, setSimulation] = useState<ChargingSimulation | null>(null);
   const [timeAcceleration, setTimeAcceleration] = useState(10);
   
@@ -107,10 +106,6 @@ export default function Home() {
     simulationRef.current.reset();
   };
   
-  const toggleViewMode = () => {
-    setViewMode(prev => prev === 'temperature' ? 'voltage' : 'temperature');
-  };
-  
   if (!simulation) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
@@ -127,6 +122,7 @@ export default function Home() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
+          <div className="mb-6">
           <SimulationControls
             onStart={handleStart}
             onStop={handleStop}
@@ -136,9 +132,15 @@ export default function Home() {
             timeAcceleration={timeAcceleration}
             onTimeAccelerationChange={handleTimeAccelerationChange}
           />
+          </div>
+
+          <div className="">
+          {simulation && <SimulationStats simulation={simulation} />}
+          </div>
         </div>
         
         <div className="lg:col-span-2">
+          <div className="mb-6">
           {/* Key Stats Section */}
           <div className="bg-white p-4 rounded-lg shadow-md mb-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -179,28 +181,11 @@ export default function Home() {
           {simulation && simulation.dataPoints && simulation.dataPoints.length > 0 && (
             <ChargingChart dataPoints={simulation.dataPoints} />
           )}
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div className="lg:col-span-1">
-          {simulation && <SimulationStats simulation={simulation} />}
-        </div>
-        
-        <div className="lg:col-span-2">
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={toggleViewMode}
-              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              Switch to {viewMode === 'temperature' ? 'Voltage' : 'Temperature'} View
-            </button>
           </div>
           
           {simulation && simulation.batteryPack && (
             <BatteryVisualizer
               batteryPack={simulation.batteryPack}
-              viewMode={viewMode}
             />
           )}
         </div>

@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BatteryPack } from '../models/BatteryPack';
 
 interface BatteryVisualizerProps {
   batteryPack: BatteryPack | null;
-  viewMode: 'temperature' | 'voltage';
 }
 
 interface BatteryCell {
@@ -11,7 +10,9 @@ interface BatteryCell {
   stateOfCharge?: number;
 }
 
-const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack, viewMode }) => {
+const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) => {
+  const [viewMode, setViewMode] = useState<'temperature' | 'voltage'>('temperature');
+
   // More robust check for batteryPack and its properties
   if (!batteryPack) {
     return <div className="bg-white p-6 rounded-lg shadow-md">Loading battery data...</div>;
@@ -56,9 +57,21 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack, view
     moduleRows.push(modulesCopy.splice(0, modulesPerRow));
   }
   
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'temperature' ? 'voltage' : 'temperature');
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-4">Battery Visualization</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xl font-semibold">Battery Visualization</h2>
+        <button
+          onClick={toggleViewMode} 
+          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+        >
+          Switch to {viewMode === 'temperature' ? 'Voltage' : 'Temperature'} View
+        </button>
+      </div>
       <p className="text-sm text-gray-500 mb-4">
         Showing {viewMode === 'temperature' ? 'temperature' : 'state of charge'} distribution
       </p>
