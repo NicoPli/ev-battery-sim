@@ -23,7 +23,9 @@ export default function Home() {
       maxCRate: 2,
       coolingPower: 1,
       moduleCount: 24,
-      maxCarPower: null
+      maxCarPower: null,
+      initialTemperature: 25,
+      batteryHeatingEnabled: true
     };
     
     const batteryPack = new BatteryPack(
@@ -31,7 +33,9 @@ export default function Home() {
       defaultConfig.systemVoltage,
       defaultConfig.maxCRate,
       defaultConfig.coolingPower,
-      defaultConfig.maxCarPower
+      defaultConfig.maxCarPower,
+      defaultConfig.initialTemperature,
+      defaultConfig.batteryHeatingEnabled
     );
     
     const sim = new ChargingSimulation(batteryPack, defaultConfig.chargerType);
@@ -72,7 +76,9 @@ export default function Home() {
       config.systemVoltage, 
       config.maxCRate,
       config.coolingPower,
-      config.maxCarPower
+      config.maxCarPower,
+      config.initialTemperature,
+      config.batteryHeatingEnabled
     );
     
     // Create new simulation with updated battery pack

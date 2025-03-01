@@ -4,14 +4,15 @@ export class BatteryModule {
   private _cells: Cell[] = [];
   private _cellsInSeries: number;
   private _cellsInParallel: number;
+  private _heatingEnabled: boolean = false;
 
-  constructor(cellsInSeries: number = 12, cellsInParallel: number = 8) {
+  constructor(cellsInSeries: number = 12, cellsInParallel: number = 8, initialTemperature: number = 25) {
     this._cellsInSeries = cellsInSeries;
     this._cellsInParallel = cellsInParallel;
     
     // Create cells
     for (let i = 0; i < cellsInSeries * cellsInParallel; i++) {
-      this._cells.push(new Cell());
+      this._cells.push(new Cell(0.0, 10, initialTemperature));
     }
   }
 
@@ -29,6 +30,18 @@ export class BatteryModule {
 
   get totalCells(): number {
     return this._cells.length;
+  }
+
+  set heatingEnabled(value: boolean) {
+    this._heatingEnabled = value;
+    // Apply to all cells
+    this._cells.forEach(cell => {
+      cell.heatingEnabled = value;
+    });
+  }
+
+  get heatingEnabled(): boolean {
+    return this._heatingEnabled;
   }
 
   get voltage(): number {
@@ -182,9 +195,12 @@ export class BatteryModule {
       cell.temperature += netTempChange * randomFactor;
       
       // Ensure temperature doesn't go below ambient
-      if (cell.temperature < ambientTemp) {
+      if (cell.temperature < ambientTemp && !this._heatingEnabled) {
         cell.temperature = ambientTemp;
       }
+      
+      // Update each cell individually with its own heating/cooling
+      cell.updateTemperature(current / this._cellsInParallel, deltaTimeHours, coolingPower);
     });
   }
 
@@ -228,7 +244,8 @@ export class BatteryModule {
     }
   }
 
-  reset(): void {
-    this._cells.forEach(cell => cell.reset());
+  reset(initialTemperature: number = 25): void {
+    this._cells.forEach(cell => cell.reset(initialTemperature));
+    this._heatingEnabled = false;
   }
 } 

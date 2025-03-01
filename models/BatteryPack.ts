@@ -10,18 +10,24 @@ export class BatteryPack {
   private _seriesModules: number = 1;
   private _parallelStrings: number = 1;
   private _limitingFactor: string | null = null;
+  private _initialTemperature: number = 25;
+  private _batteryHeatingEnabled: boolean = false;
 
   constructor(
     moduleCount: number = 4,
     systemVoltage: number = 400,
     maxCRate: number = 2,
     coolingPower: number = 1,
-    maxCarPower: number | null = null
+    maxCarPower: number | null = null,
+    initialTemperature: number = 25,
+    batteryHeatingEnabled: boolean = false
   ) {
     this._systemVoltage = systemVoltage;
     this._maxCRate = maxCRate;
     this._coolingPower = coolingPower;
     this._maxCarPower = maxCarPower;
+    this._initialTemperature = initialTemperature;
+    this._batteryHeatingEnabled = batteryHeatingEnabled;
     
     // For a 400V system with cells at ~3.7V nominal:
     // 400V ÷ 3.7V ≈ 108 cells in series
@@ -44,14 +50,14 @@ export class BatteryPack {
     for (let p = 0; p < parallelStrings; p++) {
       for (let s = 0; s < modulesInSeries; s++) {
         if (this._modules.length < moduleCount) {
-          this._modules.push(new BatteryModule(cellsPerModule, cellsInParallel));
+          this._modules.push(new BatteryModule(cellsPerModule, cellsInParallel, initialTemperature));
         }
       }
     }
     
     // Add any remaining modules to maintain the requested module count
     while (this._modules.length < moduleCount) {
-      this._modules.push(new BatteryModule(cellsPerModule, cellsInParallel));
+      this._modules.push(new BatteryModule(cellsPerModule, cellsInParallel, initialTemperature));
     }
     
     // Store the configuration for voltage calculation
@@ -60,6 +66,11 @@ export class BatteryPack {
     
     // Flatten cells for easier access
     this._cells = this._modules.flatMap(module => module.cells);
+    
+    // Apply heating setting to all modules
+    if (batteryHeatingEnabled) {
+      this.enableHeating();
+    }
   }
 
   get modules(): BatteryModule[] {
@@ -68,6 +79,28 @@ export class BatteryPack {
 
   get cells(): any[] {
     return this._cells;
+  }
+
+  get initialTemperature(): number {
+    return this._initialTemperature;
+  }
+
+  get batteryHeatingEnabled(): boolean {
+    return this._batteryHeatingEnabled;
+  }
+
+  enableHeating(): void {
+    this._batteryHeatingEnabled = true;
+    this._modules.forEach(module => {
+      module.heatingEnabled = true;
+    });
+  }
+
+  disableHeating(): void {
+    this._batteryHeatingEnabled = false;
+    this._modules.forEach(module => {
+      module.heatingEnabled = false;
+    });
   }
 
   get totalVoltage(): number {
@@ -143,6 +176,31 @@ export class BatteryPack {
     
     // Calculate temperature limit - make it more gradual with earlier onset
     let temperatureLimit = Number.MAX_VALUE;
+    
+    // Add cold temperature limit
+    let coldTemperatureLimit = Number.MAX_VALUE;
+    if (this.averageTemperature < 15) {
+      // Make the cold temperature limit more severe
+      // At 15°C: ~90% of current
+      // At 5°C: ~40% of current
+      // At -5°C: ~5% of current
+      const tempFactor = Math.max(0.05, (this.averageTemperature + 5) / 20);
+      
+      // Apply a more dramatic curve to make the effect more noticeable
+      const adjustedFactor = Math.pow(tempFactor, 1.5);
+      coldTemperatureLimit = maxChargerCurrent * adjustedFactor;
+      
+      // If heating is enabled, improve the limit somewhat
+      if (this._batteryHeatingEnabled) {
+        // Heating helps, but doesn't completely eliminate the cold effect
+        coldTemperatureLimit = Math.min(
+          maxChargerCurrent * 0.9, // Cap at 90% even with heating
+          coldTemperatureLimit * 2.5 // Heating improves limit by 2.5x
+        );
+      }
+    }
+    
+    // Hot temperature limit
     if (this.maxTemperature > 40) {
       // Create a more gradual reduction curve
       // Make the temperature threshold higher when cooling power is higher
@@ -169,6 +227,7 @@ export class BatteryPack {
       cRateLimit,
       powerLimit,
       temperatureLimit,
+      coldTemperatureLimit,
       balancingLimit,
       socLimit
     );
@@ -179,7 +238,8 @@ export class BatteryPack {
       maxChargerCurrent, 
       cRateLimit, 
       powerLimit, 
-      temperatureLimit, 
+      temperatureLimit,
+      coldTemperatureLimit,
       balancingLimit,
       socLimit
     );
@@ -187,13 +247,14 @@ export class BatteryPack {
     return limitedCurrent;
   }
 
-  // Add a new method to determine the limiting factor
+  // Update the method to include cold temperature limit
   private determineLimitingFactor(
     limitedCurrent: number,
     chargerMax: number,
     cRateLimit: number,
     powerLimit: number,
     tempLimit: number,
+    coldTempLimit: number,
     balancingLimit: number,
     socLimit: number
   ): string {
@@ -202,7 +263,8 @@ export class BatteryPack {
     if (Math.abs(limitedCurrent - chargerMax) < epsilon) return "Charger maximum";
     if (Math.abs(limitedCurrent - cRateLimit) < epsilon) return "C-rate limit";
     if (Math.abs(limitedCurrent - powerLimit) < epsilon) return "Car power limit";
-    if (Math.abs(limitedCurrent - tempLimit) < epsilon) return "Temperature limit";
+    if (Math.abs(limitedCurrent - tempLimit) < epsilon) return "Temperature limit (hot)";
+    if (Math.abs(limitedCurrent - coldTempLimit) < epsilon) return "Temperature limit (cold)";
     if (Math.abs(limitedCurrent - balancingLimit) < epsilon) return "Cell balancing";
     if (Math.abs(limitedCurrent - socLimit) < epsilon) return "SoC limit";
     
@@ -227,7 +289,14 @@ export class BatteryPack {
   }
 
   reset(): void {
-    this._modules.forEach(module => module.reset());
+    this._modules.forEach(module => module.reset(this._initialTemperature));
+    
+    // Apply heating setting after reset
+    if (this._batteryHeatingEnabled) {
+      this.enableHeating();
+    } else {
+      this.disableHeating();
+    }
   }
 
   get minCellVoltage(): number {

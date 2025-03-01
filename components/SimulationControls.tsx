@@ -8,6 +8,8 @@ export type SimulationConfig = {
   coolingPower: number;
   moduleCount: number;
   maxCarPower: number | null;
+  initialTemperature: number;
+  batteryHeatingEnabled: boolean;
 };
 
 interface SimulationControlsProps {
@@ -35,6 +37,8 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
   const [coolingPower, setCoolingPower] = useState<number>(5);
   const [batterySize, setBatterySize] = useState<number>(80); // Store battery size in kWh
   const [maxCarPower, setMaxCarPower] = useState<number | null>(null);
+  const [initialTemperature, setInitialTemperature] = useState<number>(25);
+  const [batteryHeatingEnabled, setBatteryHeatingEnabled] = useState<boolean>(false);
   
   // Get cell properties dynamically
   const [cellProps, setCellProps] = useState({
@@ -50,6 +54,13 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       capacity: sampleCell.capacity
     });
   }, []);
+  
+  // Auto-enable battery heating when temperature is low
+  useEffect(() => {
+    if (initialTemperature < 15) {
+      setBatteryHeatingEnabled(true);
+    }
+  }, [initialTemperature]);
   
   // Calculate module count based on battery size and voltage
   const calculateModuleCount = (capacityKWh: number, voltage: number) => {
@@ -89,11 +100,35 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       maxCRate,
       coolingPower,
       moduleCount, // Use calculated module count
-      maxCarPower
+      maxCarPower,
+      initialTemperature,
+      batteryHeatingEnabled
     });
     
     // Start the simulation
     onStart();
+  };
+  
+  // Add this effect to update the configuration whenever temperature or heating changes
+  useEffect(() => {
+    // Update the configuration when temperature or heating changes
+    onConfigChange({
+      systemVoltage,
+      chargerType,
+      maxCRate,
+      coolingPower,
+      moduleCount,
+      maxCarPower,
+      initialTemperature,
+      batteryHeatingEnabled
+    });
+  }, [initialTemperature, batteryHeatingEnabled]);
+  
+  // Also update the handleTemperatureChange function
+  const handleTemperatureChange = (value: number) => {
+    setInitialTemperature(value);
+    // Reset the simulation with the new temperature
+    onReset();
   };
   
   return (
@@ -244,6 +279,48 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
           className="w-full"
         />
       </div>
+
+      {/* Initial Temperature */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">
+          Initial Temperature: {initialTemperature}°C
+          {initialTemperature < 15 && (
+            <span className="ml-2 text-amber-500 font-medium">
+              (Cold battery - charging limited)
+            </span>
+          )}
+        </label>
+        <input
+          type="range"
+          min="-10"
+          max="25"
+          step="1"
+          value={initialTemperature}
+          onChange={(e) => handleTemperatureChange(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+      
+      {/* Battery Heating Option */}
+      {initialTemperature < 15 && (
+        <div className="mb-4">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="batteryHeating"
+              checked={batteryHeatingEnabled}
+              onChange={(e) => setBatteryHeatingEnabled(e.target.checked)}
+              className="mr-2 h-4 w-4"
+            />
+            <label htmlFor="batteryHeating" className="text-sm font-medium">
+              Enable Battery Heating
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Heating helps warm the battery for faster charging in cold conditions
+          </p>
+        </div>
+      )}
       
       {/* Max Car Power */}
       <div className="mb-4">

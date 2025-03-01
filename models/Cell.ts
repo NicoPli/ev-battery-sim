@@ -9,8 +9,9 @@ export class Cell {
   private _randomFactor: number = 0.95 + Math.random() * 0.1; // 0.95-1.05 random variation
   private _chargingEfficiency: number = 1.0; // Base charging efficiency
   private _charge: number = 0; // Internal charge storage
+  private _heatingEnabled: boolean = false; // Battery heating status
 
-  constructor(initialSoc: number = 0.0, capacity: number = 10) {
+  constructor(initialSoc: number = 0.0, capacity: number = 10, initialTemperature: number = 25) {
     // Add randomness to initial state of charge (±5%)
     this._stateOfCharge = initialSoc * (0.95 + Math.random() * 0.1);
     
@@ -22,6 +23,9 @@ export class Cell {
     
     // Add randomness to internal resistance (±20%)
     this._internalResistance = this._internalResistance * (0.8 + Math.random() * 0.4);
+    
+    // Set initial temperature
+    this._temperature = initialTemperature;
   }
 
   get temperature(): number {
@@ -41,7 +45,7 @@ export class Cell {
   }
 
   get voltage(): number {
-      return this._minVoltage + (this._maxVoltage - this._minVoltage) * this._stateOfCharge;
+    return this._minVoltage + (this._maxVoltage - this._minVoltage) * this._stateOfCharge;
   }
 
   get capacity(): number {
@@ -52,13 +56,34 @@ export class Cell {
     return this._randomFactor;
   }
 
+  set heatingEnabled(value: boolean) {
+    this._heatingEnabled = value;
+  }
+
+  get heatingEnabled(): boolean {
+    return this._heatingEnabled;
+  }
+
   updateCharge(current: number, deltaTimeHours: number): void {
+    // Apply temperature-based charging limitation
+    let effectiveCurrent = current;
+    
+    // Limit charging current when battery is cold
+    if (this._temperature < 15) {
+      // Progressive reduction based on temperature
+      // At 15°C: ~90% of current
+      // At 5°C: ~50% of current
+      // At -5°C: ~10% of current
+      const tempFactor = Math.max(0.1, (this._temperature + 5) / 20);
+      effectiveCurrent = current * tempFactor;
+    }
+    
     // Each cell has a significantly different charging efficiency
     // This creates more pronounced imbalance over time
     const chargingEfficiency = this._chargingEfficiency * (0.7 + Math.random() * 0.6); // 70-130% of base efficiency
     
     // Calculate charge added (in Ah)
-    const chargeAdded = current * deltaTimeHours * chargingEfficiency;
+    const chargeAdded = effectiveCurrent * deltaTimeHours * chargingEfficiency;
     
     // Calculate new charge level
     const newCharge = this._charge + chargeAdded;
@@ -95,6 +120,13 @@ export class Cell {
       this._temperature = this._temperature + tempRise;
     }
     
+    // Battery heating effect (if enabled)
+    if (this._heatingEnabled && this._temperature < 20) {
+      // Apply heating effect - stronger when battery is colder
+      const heatingPower = 3.0 * (1.0 - (this._temperature / 20));
+      this._temperature += heatingPower * deltaTimeHours;
+    }
+    
     // Ambient temperature effect (always happens)
     const ambientDiff = 25 - this._temperature;
     const ambientEffect = 0.05 * ambientDiff * deltaTimeHours;
@@ -111,9 +143,10 @@ export class Cell {
     }
   }
 
-  reset(): void {
-    this._temperature = 25;
+  reset(initialTemperature: number = 25): void {
+    this._temperature = initialTemperature;
     this._stateOfCharge = 0.1;
+    this._heatingEnabled = false;
   }
 
   private updateVoltage(): void {

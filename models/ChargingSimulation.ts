@@ -8,6 +8,7 @@ export type SimulationDataPoint = {
   current: number;
   voltage: number;
   temperature: number;
+  heatingEnabled?: boolean;
 };
 
 export class ChargingSimulation {
@@ -142,7 +143,8 @@ export class ChargingSimulation {
       power,
       current,
       voltage,
-      temperature: this._batteryPack.averageTemperature
+      temperature: this._batteryPack.averageTemperature,
+      heatingEnabled: this._batteryPack.batteryHeatingEnabled
     });
     
     // Update elapsed time
@@ -166,7 +168,8 @@ export class ChargingSimulation {
       power,
       current,
       voltage,
-      temperature: this._batteryPack.averageTemperature
+      temperature: this._batteryPack.averageTemperature,
+      heatingEnabled: this._batteryPack.batteryHeatingEnabled
     });
     
     // Limit the number of data points to prevent memory issues
