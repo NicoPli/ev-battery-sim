@@ -9,7 +9,7 @@ export type SimulationConfig = {
   maxCarPower: number | null;
 };
 
-type SimulationControlsProps = {
+interface SimulationControlsProps {
   onStart: () => void;
   onStop: () => void;
   onReset: () => void;
@@ -17,7 +17,7 @@ type SimulationControlsProps = {
   isRunning: boolean;
   timeAcceleration: number;
   onTimeAccelerationChange: (acceleration: number) => void;
-};
+}
 
 const SimulationControls: React.FC<SimulationControlsProps> = ({
   onStart,
@@ -28,203 +28,205 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
   timeAcceleration,
   onTimeAccelerationChange
 }) => {
-  const [config, setConfig] = useState<SimulationConfig>({
-    systemVoltage: 400,
-    chargerType: 'Supercharger',
-    maxCRate: 2,
-    coolingPower: 1,
-    moduleCount: 24,
-    maxCarPower: null
-  });
+  const [systemVoltage, setSystemVoltage] = useState<number>(400);
+  const [chargerType, setChargerType] = useState<'Supercharger' | 'Standard CCS'>('Supercharger');
+  const [maxCRate, setMaxCRate] = useState<number>(2);
+  const [coolingPower, setCoolingPower] = useState<number>(1);
+  const [moduleCount, setModuleCount] = useState<number>(24);
+  const [maxCarPower, setMaxCarPower] = useState<number | null>(null);
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target as HTMLInputElement;
-    
-    let parsedValue: any = value;
-    
-    if (type === 'number') {
-      parsedValue = parseFloat(value);
-      if (isNaN(parsedValue)) {
-        parsedValue = 0;
-      }
-    } else if (name === 'maxCarPower') {
-      parsedValue = value === '' ? null : parseFloat(value);
-      if (parsedValue !== null && isNaN(parsedValue)) {
-        parsedValue = null;
-      }
-    }
-    
-    setConfig({
-      ...config,
-      [name]: parsedValue
+  // Handle start button click - apply settings and start simulation
+  const handleStart = () => {
+    // Apply current settings
+    onConfigChange({
+      systemVoltage,
+      chargerType,
+      maxCRate,
+      coolingPower,
+      moduleCount,
+      maxCarPower
     });
-  };
-  
-  const handleApplySettings = () => {
-    onConfigChange(config);
+    
+    // Start the simulation
+    onStart();
   };
   
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-xl font-semibold mb-4">Simulation Controls</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            System Voltage
-          </label>
-          <select
-            name="systemVoltage"
-            value={config.systemVoltage}
-            onChange={handleInputChange}
-            disabled={isRunning}
-            className="w-full p-2 border rounded"
-          >
-            <option value={400}>400V</option>
-            <option value={800}>800V</option>
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Charger Type
-          </label>
-          <select
-            name="chargerType"
-            value={config.chargerType}
-            onChange={handleInputChange}
-            disabled={isRunning}
-            className="w-full p-2 border rounded"
-          >
-            <option value="Supercharger">Supercharger (625A)</option>
-            <option value="Standard CCS">Standard CCS (500A)</option>
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Max C-Rate
-          </label>
-          <input
-            type="number"
-            name="maxCRate"
-            value={config.maxCRate}
-            onChange={handleInputChange}
-            disabled={isRunning}
-            min={0.1}
-            max={5}
-            step={0.1}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Cooling Power (0-5)
-          </label>
-          <input
-            type="number"
-            name="coolingPower"
-            value={config.coolingPower}
-            onChange={handleInputChange}
-            disabled={isRunning}
-            min={0}
-            max={5}
-            step={0.1}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Number of Modules
-          </label>
-          <input
-            type="number"
-            name="moduleCount"
-            value={config.moduleCount}
-            onChange={handleInputChange}
-            disabled={isRunning}
-            min={1}
-            max={36}
-            step={1}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Max Car Power (kW, optional)
-          </label>
-          <input
-            type="number"
-            name="maxCarPower"
-            value={config.maxCarPower === null ? '' : config.maxCarPower}
-            onChange={handleInputChange}
-            disabled={isRunning}
-            min={10}
-            placeholder="No limit"
-            className="w-full p-2 border rounded"
-          />
-        </div>
-      </div>
-      
-      <div className="mb-6">
+      {/* Control buttons */}
+      <div className="flex gap-2 mb-6">
         <button
-          onClick={handleApplySettings}
+          onClick={handleStart}
           disabled={isRunning}
           className={`px-4 py-2 rounded ${
             isRunning
               ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-blue-500 text-white hover:bg-blue-600'
+              : 'bg-green-500 text-white hover:bg-green-600'
           }`}
         >
-          Apply Settings
+          Start
+        </button>
+        <button
+          onClick={onStop}
+          disabled={!isRunning}
+          className={`px-4 py-2 rounded ${
+            !isRunning
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-red-500 text-white hover:bg-red-600'
+          }`}
+        >
+          Stop
+        </button>
+        <button
+          onClick={onReset}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Reset
         </button>
       </div>
       
+      {/* Time Acceleration control */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Time Acceleration: {timeAcceleration}x
         </label>
         <input
           type="range"
-          min={1}
-          max={100}
+          min="1"
+          max="100"
           value={timeAcceleration}
-          onChange={(e) => onTimeAccelerationChange(parseInt(e.target.value))}
+          onChange={(e) => onTimeAccelerationChange(Number(e.target.value))}
           className="w-full"
         />
       </div>
       
-      <div className="flex space-x-4">
-        {!isRunning ? (
+      <h3 className="text-lg font-medium mb-3">Battery Configuration</h3>
+      
+      {/* System Voltage */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          System Voltage
+        </label>
+        <div className="flex gap-2">
           <button
-            onClick={onStart}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            onClick={() => setSystemVoltage(400)}
+            className={`flex-1 px-3 py-1 rounded ${
+              systemVoltage === 400
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
           >
-            Start
+            400V
           </button>
-        ) : (
           <button
-            onClick={onStop}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            onClick={() => setSystemVoltage(800)}
+            className={`flex-1 px-3 py-1 rounded ${
+              systemVoltage === 800
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
           >
-            Stop
+            800V
           </button>
-        )}
-        
-        <button
-          onClick={onReset}
-          disabled={isRunning}
-          className={`px-4 py-2 rounded ${
-            isRunning
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-yellow-500 text-white hover:bg-yellow-600'
-          }`}
-        >
-          Reset
-        </button>
+        </div>
+      </div>
+      
+      {/* Charger Type */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Charger Type
+        </label>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setChargerType('Supercharger')}
+            className={`flex-1 px-3 py-1 rounded ${
+              chargerType === 'Supercharger'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            Supercharger
+          </button>
+          <button
+            onClick={() => setChargerType('Standard CCS')}
+            className={`flex-1 px-3 py-1 rounded ${
+              chargerType === 'Standard CCS'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            Standard CCS
+          </button>
+        </div>
+      </div>
+      
+      {/* Max C-Rate */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Max C-Rate: {maxCRate}C
+        </label>
+        <input
+          type="range"
+          min="1"
+          max="6"
+          step="0.1"
+          value={maxCRate}
+          onChange={(e) => setMaxCRate(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+      
+      {/* Cooling Power */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Cooling Power: {coolingPower}x
+        </label>
+        <input
+          type="range"
+          min="0.1"
+          max="2"
+          step="0.1"
+          value={coolingPower}
+          onChange={(e) => setCoolingPower(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+      
+      {/* Module Count */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Module Count: {moduleCount}
+        </label>
+        <input
+          type="range"
+          min="4"
+          max="32"
+          step="4"
+          value={moduleCount}
+          onChange={(e) => setModuleCount(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+      
+      {/* Max Car Power */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Max Car Power (kW): {maxCarPower === null ? 'Unlimited' : maxCarPower}
+        </label>
+        <input
+          type="range"
+          min="50"
+          max="350"
+          step="10"
+          value={maxCarPower === null ? 350 : maxCarPower}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            setMaxCarPower(value >= 350 ? null : value);
+          }}
+          className="w-full"
+        />
       </div>
     </div>
   );

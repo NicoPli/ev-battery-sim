@@ -109,9 +109,11 @@ export class BatteryPack {
     return this._modules.some(module => module.needsBalancing);
   }
 
-  calculateChargingCurrent(chargerMaxCurrent: number): number {
-    // Calculate maximum current based on C-rate
-    const cRateLimit = this._maxCRate * this.totalCapacity;
+  calculateChargingCurrent(maxChargerCurrent: number): number {
+    // Calculate all the limits
+    
+    // C-rate limit - increase the multiplier to allow higher charging rates
+    const cRateLimit = this._maxCRate * this.totalCapacity * 2; // Multiply by 2 for more realistic power levels
     
     // Calculate maximum current based on power limit (if any)
     let powerLimit = Number.MAX_VALUE;
@@ -124,18 +126,18 @@ export class BatteryPack {
     if (this.maxTemperature > 45) {
       // Start reducing current at 45°C
       const reductionFactor = Math.max(0, 1 - (this.maxTemperature - 45) / 10);
-      temperatureLimit = chargerMaxCurrent * reductionFactor;
+      temperatureLimit = maxChargerCurrent * reductionFactor;
     }
     
     // Calculate balancing limit
     let balancingLimit = Number.MAX_VALUE;
     if (this.needsBalancing) {
-      balancingLimit = chargerMaxCurrent * 0.8; // Reduce to 80% if balancing needed
+      balancingLimit = maxChargerCurrent * 0.8; // Reduce to 80% if balancing needed
     }
     
     // Return minimum of all limits
     return Math.min(
-      chargerMaxCurrent,
+      maxChargerCurrent,
       cRateLimit,
       powerLimit,
       temperatureLimit,
