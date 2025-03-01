@@ -9,6 +9,7 @@ export class BatteryPack {
   private _cells: any[] = [];
   private _seriesModules: number = 1;
   private _parallelStrings: number = 1;
+  private _limitingFactor: string | null = null;
 
   constructor(
     moduleCount: number = 4,
@@ -102,7 +103,12 @@ export class BatteryPack {
   }
 
   get averageSoc(): number {
-    return this._cells.reduce((sum, cell) => sum + cell.stateOfCharge, 0) / this._cells.length * 100;
+    // Calculate the true average SoC based on the charge state of each cell
+    const totalCharge = this._cells.reduce((sum, cell) => sum + cell.stateOfCharge * cell.capacity, 0);
+    const totalCapacity = this._cells.reduce((sum, cell) => sum + cell.capacity, 0);
+    
+    // Return as percentage
+    return (totalCharge / totalCapacity) * 100;
   }
 
   get needsBalancing(): boolean {
@@ -121,28 +127,90 @@ export class BatteryPack {
       powerLimit = (this._maxCarPower * 1000) / this.totalVoltage;
     }
     
-    // Calculate temperature limit
-    let temperatureLimit = Number.MAX_VALUE;
-    if (this.maxTemperature > 45) {
-      // Start reducing current at 45°C
-      const reductionFactor = Math.max(0, 1 - (this.maxTemperature - 45) / 10);
-      temperatureLimit = maxChargerCurrent * reductionFactor;
+    // Calculate SoC-based limit (charging curve tapers at high SoC)
+    // This creates the characteristic charging curve where power drops at high SoC
+    let socLimit = Number.MAX_VALUE;
+    const avgSoc = this.averageSoc / 100; // Convert to 0-1 scale
+    if (avgSoc > 0.7) {
+      // Apply exponential taper starting at 70% SoC
+      // At 80% -> ~70% of max current
+      // At 90% -> ~40% of max current
+      // At 95% -> ~20% of max current
+      const socFactor = Math.exp(-8 * (avgSoc - 0.7));
+      socLimit = maxChargerCurrent * Math.min(1, socFactor);
     }
     
-    // Calculate balancing limit
+    // Calculate temperature limit - make it more gradual with earlier onset
+    let temperatureLimit = Number.MAX_VALUE;
+    if (this.maxTemperature > 40) {
+      // Create a more gradual reduction curve
+      // Make the temperature threshold higher when cooling power is higher
+      const coolingAdjustment = (this._coolingPower - 5) * 0.5;
+      const adjustedThreshold = 40 + coolingAdjustment;
+      
+      if (this.maxTemperature > adjustedThreshold) {
+        const reductionFactor = Math.max(0, 1 - (this.maxTemperature - adjustedThreshold) / 25);
+        temperatureLimit = maxChargerCurrent * reductionFactor;
+      }
+    }
+    
+    // Calculate balancing limit - make it more significant
     let balancingLimit = Number.MAX_VALUE;
     if (this.needsBalancing) {
-      balancingLimit = maxChargerCurrent * 0.8; // Reduce to 80% if balancing needed
+      // Make balancing limit more restrictive at higher SoC
+      const balancingFactor = this.averageSoc > 80 ? 0.5 : 0.8;
+      balancingLimit = maxChargerCurrent * balancingFactor;
     }
     
     // Return minimum of all limits
-    return Math.min(
+    const limitedCurrent = Math.min(
       maxChargerCurrent,
       cRateLimit,
       powerLimit,
       temperatureLimit,
-      balancingLimit
+      balancingLimit,
+      socLimit
     );
+    
+    // Store the limiting factor for display
+    this._limitingFactor = this.determineLimitingFactor(
+      limitedCurrent, 
+      maxChargerCurrent, 
+      cRateLimit, 
+      powerLimit, 
+      temperatureLimit, 
+      balancingLimit,
+      socLimit
+    );
+    
+    return limitedCurrent;
+  }
+
+  // Add a new method to determine the limiting factor
+  private determineLimitingFactor(
+    limitedCurrent: number,
+    chargerMax: number,
+    cRateLimit: number,
+    powerLimit: number,
+    tempLimit: number,
+    balancingLimit: number,
+    socLimit: number
+  ): string {
+    const epsilon = 0.1; // Small tolerance for floating point comparison
+    
+    if (Math.abs(limitedCurrent - chargerMax) < epsilon) return "Charger maximum";
+    if (Math.abs(limitedCurrent - cRateLimit) < epsilon) return "C-rate limit";
+    if (Math.abs(limitedCurrent - powerLimit) < epsilon) return "Car power limit";
+    if (Math.abs(limitedCurrent - tempLimit) < epsilon) return "Temperature limit";
+    if (Math.abs(limitedCurrent - balancingLimit) < epsilon) return "Cell balancing";
+    if (Math.abs(limitedCurrent - socLimit) < epsilon) return "SoC limit";
+    
+    return "Unknown limit";
+  }
+
+  // Add a getter for the limiting factor
+  get limitingFactor(): string {
+    return this._limitingFactor || "Not charging";
   }
 
   updateCharge(current: number, deltaTimeHours: number): void {
@@ -159,5 +227,17 @@ export class BatteryPack {
 
   reset(): void {
     this._modules.forEach(module => module.reset());
+  }
+
+  get minCellVoltage(): number {
+    return Math.min(...this._cells.map(cell => cell.voltage));
+  }
+
+  get maxCellVoltage(): number {
+    return Math.max(...this._cells.map(cell => cell.voltage));
+  }
+
+  get voltageDifference(): number {
+    return this.maxCellVoltage - this.minCellVoltage;
   }
 } 

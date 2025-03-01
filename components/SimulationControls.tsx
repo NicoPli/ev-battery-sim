@@ -31,7 +31,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
   const [systemVoltage, setSystemVoltage] = useState<number>(400);
   const [chargerType, setChargerType] = useState<'Supercharger' | 'Standard CCS'>('Supercharger');
   const [maxCRate, setMaxCRate] = useState<number>(2);
-  const [coolingPower, setCoolingPower] = useState<number>(1);
+  const [coolingPower, setCoolingPower] = useState<number>(5);
   const [moduleCount, setModuleCount] = useState<number>(24);
   const [maxCarPower, setMaxCarPower] = useState<number | null>(null);
   
@@ -186,7 +186,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
         <input
           type="range"
           min="0.1"
-          max="2"
+          max="20"
           step="0.1"
           value={coolingPower}
           onChange={(e) => setCoolingPower(Number(e.target.value))}

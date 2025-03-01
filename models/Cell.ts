@@ -7,10 +7,21 @@ export class Cell {
   private _minVoltage: number = 3.2; // V
   private _nominalVoltage: number = 3.7; // V
   private _randomFactor: number = 0.95 + Math.random() * 0.1; // 0.95-1.05 random variation
+  private _chargingEfficiency: number = 1.0; // Base charging efficiency
+  private _charge: number = 0; // Internal charge storage
 
   constructor(initialSoc: number = 0.1, capacity: number = 10) {
-    this._stateOfCharge = initialSoc;
-    this._capacity = capacity;
+    // Add randomness to initial state of charge (±5%)
+    this._stateOfCharge = initialSoc * (0.95 + Math.random() * 0.1);
+    
+    // Add randomness to cell capacity (±10%)
+    this._capacity = capacity * (0.9 + Math.random() * 0.2);
+    
+    // Initialize charge based on state of charge
+    this._charge = this._stateOfCharge * this._capacity;
+    
+    // Add randomness to internal resistance (±20%)
+    this._internalResistance = this._internalResistance * (0.8 + Math.random() * 0.4);
   }
 
   get temperature(): number {
@@ -35,9 +46,13 @@ export class Cell {
       // Steeper curve at low SoC
       return this._minVoltage + (this._stateOfCharge / 0.1) * 0.2;
     } else if (this._stateOfCharge > 0.9) {
-      // Steeper curve at high SoC
-      const baseVoltage = this._minVoltage + 0.8;
-      return baseVoltage + ((this._stateOfCharge - 0.9) / 0.1) * 0.2;
+      // Steeper curve at high SoC - ensure cells approach max voltage
+      const baseVoltage = this._minVoltage + 0.8; // 4.0V at 90% SoC
+      // Ensure we reach exactly 4.2V at 100% SoC
+      const remainingRange = this._maxVoltage - baseVoltage; // 0.2V
+      const normalizedSoc = (this._stateOfCharge - 0.9) / 0.1; // 0-1 range for 90-100% SoC
+      // Use a curve that approaches 4.2V more quickly
+      return baseVoltage + remainingRange * Math.pow(normalizedSoc, 0.5);
     } else {
       // Linear in the middle range
       return this._minVoltage + 0.2 + ((this._stateOfCharge - 0.1) / 0.8) * 0.6;
@@ -53,14 +68,27 @@ export class Cell {
   }
 
   updateCharge(current: number, deltaTimeHours: number): void {
-    // Apply random factor to charging rate
-    const effectiveCurrent = current * this._randomFactor;
+    // Each cell has a significantly different charging efficiency
+    // This creates more pronounced imbalance over time
+    const chargingEfficiency = this._chargingEfficiency * (0.7 + Math.random() * 0.6); // 70-130% of base efficiency
     
-    // Calculate change in SoC
-    const deltaSoc = (effectiveCurrent * deltaTimeHours) / this._capacity;
+    // Calculate charge added (in Ah)
+    const chargeAdded = current * deltaTimeHours * chargingEfficiency;
     
-    // Update SoC
-    this._stateOfCharge = Math.min(1, this._stateOfCharge + deltaSoc);
+    // Calculate new charge level
+    const newCharge = this._charge + chargeAdded;
+    
+    // Limit to capacity
+    this._charge = Math.min(newCharge, this._capacity);
+    
+    // Update state of charge
+    this._stateOfCharge = this._charge / this._capacity;
+    
+    // Ensure SoC doesn't exceed 1.0 (100%)
+    if (this._stateOfCharge > 1.0) {
+      this._stateOfCharge = 1.0;
+      this._charge = this._capacity;
+    }
   }
 
   updateTemperature(current: number, deltaTimeHours: number, cooling: number): void {
@@ -101,5 +129,10 @@ export class Cell {
   reset(): void {
     this._temperature = 25;
     this._stateOfCharge = 0.1;
+  }
+
+  private updateVoltage(): void {
+    // This method is called after SoC changes to update internal state
+    // No need to do anything as voltage is calculated dynamically from SoC
   }
 } 

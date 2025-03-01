@@ -29,6 +29,10 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
     return temp.toFixed(1);
   };
   
+  const formatVoltage = (voltage: number | undefined): string => {
+    return voltage !== undefined ? voltage.toFixed(2) : "N/A";
+  };
+  
   // Rest of the component with safe property access
   const batteryPack = simulation.batteryPack;
   
@@ -65,46 +69,8 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
   
   // Determine the current limiting factor
   const getLimitingFactor = () => {
-    if (!simulation.isRunning || !latestDataPoint) return "Not charging";
-    
-    const chargerMaxCurrent = simulation.chargerMaxCurrent;
-    
-    // Calculate all the limits
-    const cRateLimit = batteryPack._maxCRate * batteryPack.totalCapacity;
-    
-    let powerLimit = Number.MAX_VALUE;
-    if (batteryPack._maxCarPower) {
-      powerLimit = (batteryPack._maxCarPower * 1000) / batteryPack.totalVoltage;
-    }
-    
-    let temperatureLimit = Number.MAX_VALUE;
-    if (batteryPack.maxTemperature > 45) {
-      const reductionFactor = Math.max(0, 1 - (batteryPack.maxTemperature - 45) / 10);
-      temperatureLimit = chargerMaxCurrent * reductionFactor;
-    }
-    
-    let balancingLimit = Number.MAX_VALUE;
-    if (batteryPack.needsBalancing) {
-      balancingLimit = chargerMaxCurrent * 0.8;
-    }
-    
-    // Find the minimum limit
-    const currentLimit = Math.min(
-      chargerMaxCurrent,
-      cRateLimit,
-      powerLimit,
-      temperatureLimit,
-      balancingLimit
-    );
-    
-    // Determine which limit is active
-    if (Math.abs(currentLimit - chargerMaxCurrent) < 0.1) return "Charger maximum";
-    if (Math.abs(currentLimit - cRateLimit) < 0.1) return "C-rate limit";
-    if (Math.abs(currentLimit - powerLimit) < 0.1) return "Car power limit";
-    if (Math.abs(currentLimit - temperatureLimit) < 0.1) return "Temperature limit";
-    if (Math.abs(currentLimit - balancingLimit) < 0.1) return "Cell balancing";
-    
-    return "Unknown limit";
+    if (!simulation.isRunning) return "Not charging";
+    return batteryPack.limitingFactor || "Unknown";
   };
   
   return (
@@ -161,9 +127,26 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
           <p className="text-lg font-bold">{cellsInSeries}S{cellsInParallel}P ({totalCells} cells)</p>
         </div>
         
-        <div className="col-span-2">
+        <div>
           <p className="text-sm text-gray-500">Charging Limited By</p>
           <p className="text-xl font-bold">{getLimitingFactor()}</p>
+        </div>
+        
+        <div>
+          <p className="text-sm text-gray-500">Cell Voltage Range</p>
+          <p className="text-lg font-bold">
+            {batteryPack && batteryPack.minCellVoltage !== undefined 
+              ? formatVoltage(batteryPack.minCellVoltage) 
+              : "N/A"} - 
+            {batteryPack && batteryPack.maxCellVoltage !== undefined 
+              ? formatVoltage(batteryPack.maxCellVoltage) 
+              : "N/A"} V
+            {batteryPack && batteryPack.voltageDifference !== undefined && (
+              <span className="text-sm text-gray-500 ml-1">
+                (Δ{formatVoltage(batteryPack.voltageDifference)} V)
+              </span>
+            )}
+          </p>
         </div>
       </div>
     </div>
