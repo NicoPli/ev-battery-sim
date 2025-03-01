@@ -103,19 +103,21 @@ export class ChargingSimulation {
     const acceleratedDeltaTime = deltaTime * this._timeAcceleration;
     
     // Run multiple steps if needed
-    const stepsToRun = Math.floor(acceleratedDeltaTime / this._timeStep);
+    const stepsToRun = Math.max(1, Math.floor(acceleratedDeltaTime / this._timeStep));
     for (let i = 0; i < stepsToRun; i++) {
       this.step();
       
       // Stop if battery is fully charged
-      if (this._batteryPack.averageSoc >= 100) {
+      if (this._batteryPack.averageSoc >= 99.9) {
         this._isRunning = false;
         break;
       }
     }
     
-    // Schedule next update
-    requestAnimationFrame(() => this.simulationLoop());
+    // Schedule next update if still running
+    if (this._isRunning) {
+      requestAnimationFrame(() => this.simulationLoop());
+    }
   }
 
   private step(): void {
@@ -145,6 +147,11 @@ export class ChargingSimulation {
     
     // Update elapsed time
     this._elapsedTime += this._timeStep;
+    
+    // Ensure we don't accumulate too many data points
+    if (this._dataPoints.length > 1000) {
+      this._dataPoints = this._dataPoints.filter((_, i) => i % 2 === 0);
+    }
   }
 
   private addDataPoint(current: number): void {

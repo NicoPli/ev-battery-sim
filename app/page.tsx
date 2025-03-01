@@ -50,9 +50,12 @@ export default function Home() {
       setForceUpdate(prev => prev + 1);
       
       // If we have a simulation and it's running, force update the chart data
-      if (simulationRef.current && simulationRef.current.isRunning) {
-        // Create a shallow copy of the data points to force a re-render of the chart
-        const updatedSimulation = { ...simulationRef.current };
+      if (simulationRef.current) {
+        // Create a shallow copy of the simulation to force a re-render
+        const updatedSimulation = Object.assign(
+          Object.create(Object.getPrototypeOf(simulationRef.current)),
+          simulationRef.current
+        );
         setSimulation(updatedSimulation);
       }
     }, 100); // Update more frequently (every 100ms)
@@ -142,7 +145,7 @@ export default function Home() {
         </div>
         
         <div className="lg:col-span-2">
-          {simulation && simulation.dataPoints.length > 0 && (
+          {simulation && simulation.dataPoints && simulation.dataPoints.length > 0 && (
             <ChargingChart dataPoints={simulation.dataPoints} />
           )}
           
