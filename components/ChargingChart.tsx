@@ -1,140 +1,188 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
+import { Line } from 'react-chartjs-2';
 import { SimulationDataPoint } from '../models/ChargingSimulation';
-import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { useLanguage } from '../contexts/LanguageContext';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartOptions
+} from 'chart.js';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface ChargingChartProps {
   dataPoints: SimulationDataPoint[];
 }
 
 const ChargingChart: React.FC<ChargingChartProps> = ({ dataPoints }) => {
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
-  // Use a counter to force re-renders
-  const [updateCounter, setUpdateCounter] = useState(0);
-
-  // Set up an interval to force chart updates
-  useEffect(() => {
-    const updateInterval = setInterval(() => {
-      setUpdateCounter(prev => prev + 1);
-    }, 500); // Update every 500ms
-    
-    return () => clearInterval(updateInterval);
-  }, []);
-
-  // Create or update chart when dataPoints or updateCounter changes
-  useEffect(() => {
-    // Register Chart.js components
-    Chart.register(...registerables);
-    
-    // Process data to show one point per percentage
-    const percentageData: (SimulationDataPoint | null)[] = Array(101).fill(null);
-    
-    dataPoints.forEach(point => {
-      const percentIndex = Math.round(point.soc);
-      if (percentIndex >= 0 && percentIndex <= 100) {
-        if (!percentageData[percentIndex] || point.time > percentageData[percentIndex]!.time) {
-          percentageData[percentIndex] = point;
-        }
-      }
-    });
-    
-    // Prepare data for the chart
-    const labels = Array.from({ length: 101 }, (_, i) => `${i}%`);
-    const powerData = percentageData.map(point => point ? point.power : null);
-    const tempData = percentageData.map(point => point ? point.temperature : null);
-    
-    // Initialize or update chart
-    if (chartRef.current) {
-      const ctx = chartRef.current.getContext('2d');
-      
-      if (ctx) {
-        // Always destroy and recreate the chart to ensure it updates properly
-        if (chartInstance.current) {
-          chartInstance.current.destroy();
-        }
-        
-        // Create new chart
-        const config: ChartConfiguration = {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [
-              {
-                label: 'Power (kW)',
-                data: powerData,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1,
-                yAxisID: 'y',
-                spanGaps: true
-              },
-              {
-                label: 'Temperature (°C)',
-                data: tempData,
-                borderColor: 'rgb(255, 99, 132)',
-                tension: 0.1,
-                yAxisID: 'y1',
-                spanGaps: true
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: false,
-            scales: {
-              x: {
-                title: {
-                  display: true,
-                  text: 'State of Charge (%)'
-                }
-              },
-              y: {
-                type: 'linear',
-                display: true,
-                position: 'left',
-                title: {
-                  display: true,
-                  text: 'Power (kW)'
-                },
-                beginAtZero: true
-              },
-              y1: {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                title: {
-                  display: true,
-                  text: 'Temperature (°C)'
-                },
-                min: -10,
-                max: 65,
-                grid: {
-                  drawOnChartArea: false
-                }
-              }
-            }
-          }
-        };
-        
-        chartInstance.current = new Chart(ctx, config);
-      }
+  const { t } = useLanguage();
+  
+  // Sort data points by SoC for a smooth curve
+  const sortedDataPoints = [...dataPoints].sort((a, b) => a.soc - b.soc);
+  
+  // Create SoC labels for x-axis (every 1%)
+  const socLabels = [];
+  for (let i = 0; i <= 100; i += 1) {
+    socLabels.push(i);
+  }
+  
+  // Group data points by SoC ranges (every 1%)
+  const groupedData: { [key: number]: SimulationDataPoint[] } = {};
+  
+  sortedDataPoints.forEach(point => {
+    const socKey = Math.round(point.soc);
+    if (!groupedData[socKey]) {
+      groupedData[socKey] = [];
     }
-    
-    // Cleanup
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-        chartInstance.current = null;
+    groupedData[socKey].push(point);
+  });
+  
+  // Calculate average values for each SoC percentage
+  const averagedData: SimulationDataPoint[] = [];
+  
+  for (let soc = 0; soc <= 100; soc++) {
+    if (groupedData[soc] && groupedData[soc].length > 0) {
+      const points = groupedData[soc];
+      const avgPower = points.reduce((sum, p) => sum + p.power, 0) / points.length;
+      const avgTemp = points.reduce((sum, p) => sum + p.temperature, 0) / points.length;
+      const heatingEnabled = points.some(p => p.heatingEnabled);
+      
+      averagedData.push({
+        soc,
+        power: avgPower,
+        temperature: avgTemp,
+        current: 0, // Not used
+        time: 0, // Not relevant for this view
+        voltage: 0, // Not relevant for this view
+        heatingEnabled
+      });
+    }
+  }
+  
+  const data = {
+    labels: socLabels,
+    datasets: [
+      {
+        label: `${t.stats.currentPower} (kW)`,
+        data: socLabels.map(soc => {
+          const closest = averagedData.find(p => Math.round(p.soc) === soc);
+          return closest ? closest.power : null;
+        }),
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        yAxisID: 'y',
+        tension: 0.3,
+      },
+      {
+        label: `${t.stats.temperature} (°C)`,
+        data: socLabels.map(soc => {
+          const closest = averagedData.find(p => Math.round(p.soc) === soc);
+          return closest ? closest.temperature : null;
+        }),
+        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+        yAxisID: 'y1',
+        tension: 0.3,
       }
-    };
-  }, [dataPoints, updateCounter]); // Re-run when dataPoints or updateCounter changes
+    ],
+  };
+  
+  const options: ChartOptions<'line'> = {
+    responsive: true,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    animation: false,
+    animations: {
+      colors: false,
+      x: false,
+      y: false
+    },
+    transitions: {
+      active: {
+        animation: {
+          duration: 0
+        }
+      }
+    },
+    plugins: {
+      title: {
+        display: true,
+        text: t.title,
+      },
+      tooltip: {
+        callbacks: {
+          title: (items) => {
+            if (!items.length) return '';
+            const item = items[0];
+            return `${t.stats.stateOfCharge}: ${item.label}%`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: `${t.stats.stateOfCharge} (%)`,
+        },
+        ticks: {
+          // Only show every 5% on the axis to avoid crowding
+          callback: function(value, index) {
+            return index % 5 === 0 ? this.getLabelForValue(index) : '';
+          }
+        }
+      },
+      y: {
+        type: 'linear' as const,
+        display: true,
+        position: 'left' as const,
+        title: {
+          display: true,
+          text: `${t.stats.currentPower} (kW)`,
+        },
+        min: 0,
+        max: 500, // Fixed scale for power
+        grid: {
+          drawOnChartArea: true,
+        },
+      },
+      y1: {
+        type: 'linear' as const,
+        display: true,
+        position: 'right' as const,
+        title: {
+          display: true,
+          text: `${t.stats.temperature} (°C)`,
+        },
+        min: -10, // Fixed scale for temperature
+        max: 60,  // Fixed scale for temperature
+        grid: {
+          drawOnChartArea: false,
+        },
+      },
+    },
+  };
 
   return (
-    <div className="p-4 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Charging Curve</h2>
-      <div className="w-full h-80">
-        <canvas ref={chartRef} />
-      </div>
+    <div className="p-6 rounded-lg shadow-md">
+      <Line options={options} data={data} />
     </div>
   );
 };

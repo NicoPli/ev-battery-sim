@@ -6,6 +6,9 @@ import BatteryVisualizer from '../components/BatteryVisualizer';
 import ChargingChart from '../components/ChargingChart';
 import { BatteryPack } from '../models/BatteryPack';
 import { ChargingSimulation } from '../models/ChargingSimulation';
+import LanguageSelector from '../components/LanguageSelector';
+import { useLanguage } from '../contexts/LanguageContext';
+import Link from 'next/link';
 
 export default function Home() {
   const [simulation, setSimulation] = useState<ChargingSimulation | null>(null);
@@ -122,6 +125,8 @@ export default function Home() {
     return voltage !== undefined ? voltage.toFixed(2) : "N/A";
   };
   
+  const { t } = useLanguage();
+  
   if (!simulation) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
@@ -134,8 +139,10 @@ export default function Home() {
   
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">EV Battery Charging Simulator</h1>
-      
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">{t.title}</h1>
+        <LanguageSelector />
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <div className="mb-6">
@@ -149,6 +156,12 @@ export default function Home() {
             onTimeAccelerationChange={handleTimeAccelerationChange}
           />
           </div>
+          <div>
+            Made by <Link href="https://www.youtube.com/@NicoPliquettDE" className="text-blue-500 hover:text-blue-700">Nico Pliquett</Link> and AI
+          </div>
+          <div className="text-sm mt-4">
+            <Link href="https://www.inspyra.me/impressum" className="text-blue-500 hover:text-blue-700">Impressum</Link>
+          </div>
         </div>
         
         <div className="lg:col-span-2">
@@ -157,59 +170,59 @@ export default function Home() {
           <div className="p-4 rounded-lg shadow-md mb-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm">Elapsed Time</p>
+                <p className="text-sm">{t.stats.elapsedTime}</p>
                 <p className="text-2xl font-bold">
                   {formatTime(simulation.elapsedTime)}
                 </p>
               </div>
               
               <div>
-                <p className="text-sm">State of Charge</p>
+                <p className="text-sm">{t.stats.stateOfCharge}</p>
                 <p className="text-2xl font-bold">
                   {batteryPack.averageSoc.toFixed(1)}%
                 </p>
               </div>
               
               <div>
-                <p className="text-sm">Current Power</p>
+                <p className="text-sm">{t.stats.currentPower}</p>
                 <p className="text-2xl font-bold">
                   {latestDataPoint ? latestDataPoint.power.toFixed(1) : "0"} kW
                 </p>
               </div>
               
               <div>
-                <p className="text-sm">Temperature</p>
+                <p className="text-sm">{t.stats.temperature}</p>
                 <p className="text-2xl font-bold">
                   {batteryPack.averageTemperature.toFixed(1)}°C
                   <span className="text-sm ml-1">
-                    (Max: {batteryPack.maxTemperature.toFixed(1)}°C)
+                    ({t.stats.max}: {batteryPack.maxTemperature.toFixed(1)}°C)
                   </span>
                 </p>
               </div>
 
               <div>
-                <p className="text-sm">Charging Limited by</p>
+                <p className="text-sm">{t.stats.chargingLimitedBy}</p>
                 <p className="text-2xl font-bold">
                   {getLimitingFactor()}
                 </p>
               </div>
 
               <div>
-                <p className="text-sm">Battery Voltage</p>
+                <p className="text-sm">{t.stats.batteryVoltage}</p>
                 <p className="text-2xl font-bold">
                   {batteryPack.totalVoltage.toFixed(1)} V
                 </p>
               </div>
 
               <div>
-                <p className="text-sm">Current</p>
+                <p className="text-sm">{t.stats.current}</p>
                 <p className="text-2xl font-bold">
                   {latestDataPoint ? latestDataPoint.current.toFixed(1) : "0"} A
                 </p>
               </div>
 
               <div>
-                <p className="text-sm">Cell Voltage Range</p>
+                <p className="text-sm">{t.stats.cellVoltageRange}</p>
                 <p className="text-2xl font-bold">
                 {batteryPack && batteryPack.minCellVoltage !== undefined 
               ? formatVoltage(batteryPack.minCellVoltage) 

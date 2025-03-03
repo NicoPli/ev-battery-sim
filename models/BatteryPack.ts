@@ -29,7 +29,7 @@ export class BatteryPack {
     this._coolingPower = coolingPower;
     this._maxCarPower = maxCarPower;
     this._initialTemperature = initialTemperature;
-    this._batteryHeatingEnabled = batteryHeatingEnabled;
+    this._batteryHeatingEnabled = false;
     
     const cellsInSeries400 = 108;
     const cellsInSeries800 = 216; 
@@ -61,13 +61,15 @@ export class BatteryPack {
       this._cellsInParallel = cellsInParallel800;
     }
     
-    // Create all cells
+    // Create all cells with heating disabled initially
     const totalCells = this._cellsInSeries * this._cellsInParallel;
     for (let i = 0; i < totalCells; i++) {
-      this._cells.push(new Cell(0.0, initialTemperature));
+      const cell = new Cell(0.0, initialTemperature);
+      cell.heatingEnabled = false; // Explicitly disable heating
+      this._cells.push(cell);
     }
 
-    // Apply heating setting to all cells if needed
+    // Only enable heating if explicitly requested
     if (batteryHeatingEnabled) {
       this.enableHeating();
     }
@@ -352,7 +354,11 @@ export class BatteryPack {
   }
 
   reset(): void {
-    this._cells.forEach(cell => cell.reset(this._initialTemperature));
+    // Reset all cells to initial state
+    this._cells.forEach(cell => {
+      cell.reset(this._initialTemperature);
+      cell.stateOfCharge = 0.0; // Explicitly set SoC to 0
+    });
     
     // Apply heating setting after reset
     if (this._batteryHeatingEnabled) {
@@ -376,5 +382,14 @@ export class BatteryPack {
 
   get systemVoltage(): number {
     return this._systemVoltage;
+  }
+
+  get energyCapacityKWh(): number {
+    // Calculate total energy capacity in kWh
+    const cellEnergy = this._cells[0]?.energy || 0; // Energy per cell in Wh
+    const totalCells = this._cells.length;
+    const totalEnergyWh = cellEnergy * totalCells;
+    
+    return totalEnergyWh / 1000; // Convert Wh to kWh
   }
 } 

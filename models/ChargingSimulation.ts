@@ -21,6 +21,7 @@ export class ChargingSimulation {
   private _chargerType: ChargerType;
   private _chargerMaxCurrent: number;
   private _lastUpdateTime: number = 0;
+  private _fullPointSoC: number = 0;
 
   constructor(batteryPack: BatteryPack, chargerType: ChargerType = 'Supercharger') {
     this._batteryPack = batteryPack;
@@ -86,10 +87,25 @@ export class ChargingSimulation {
   }
 
   reset(): void {
-    this.stop();
-    this._elapsedTime = 0;
-    this._dataPoints = [];
+    // Reset the battery pack
     this._batteryPack.reset();
+    
+    // Clear all data points
+    this._dataPoints = [];
+    
+    // Reset elapsed time
+    this._elapsedTime = 0;
+    
+    // Add initial data point at 0% SoC
+    this._dataPoints.push({
+      time: 0,
+      soc: this._batteryPack.averageSoc,
+      power: 0,
+      current: 0,
+      voltage: this._batteryPack.totalVoltage,
+      temperature: this._batteryPack.averageTemperature,
+      heatingEnabled: this._batteryPack.batteryHeatingEnabled
+    });
   }
 
   private simulationLoop(): void {
@@ -138,23 +154,21 @@ export class ChargingSimulation {
     const power = (voltage * current) / 1000;
     
     // Record data point
-    this._dataPoints.push({
-      time: this._elapsedTime,
-      soc: this._batteryPack.averageSoc,
-      power,
-      current,
-      voltage,
-      temperature: this._batteryPack.averageTemperature,
-      heatingEnabled: this._batteryPack.batteryHeatingEnabled
-    });
+    if(this._fullPointSoC < this._batteryPack.averageSoc) {
+      this._dataPoints.push({
+        time: this._elapsedTime,
+        soc: this._fullPointSoC,
+        power,
+        current,
+        voltage,
+        temperature: this._batteryPack.averageTemperature
+      });
+      
+      this._fullPointSoC++;
+    }
     
     // Update elapsed time
     this._elapsedTime += this._timeStep;
-    
-    // Ensure we don't accumulate too many data points
-    if (this._dataPoints.length > 1000) {
-      this._dataPoints = this._dataPoints.filter((_, i) => i % 2 === 0);
-    }
   }
 
   private addDataPoint(current: number): void {
