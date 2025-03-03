@@ -160,7 +160,7 @@ export default function Home() {
             {t.footer.aiServices}: <Link href="https://www.inspyra.me" target="_blank" className="text-blue-500 hover:text-blue-700">inspyra.me</Link>
           </div>
           <div className="text-sm mt-4">
-          <span className="float-right">Made by <Link href="https://www.youtube.com/@NicoPliquettDE" target="_blank" className="text-blue-500 hover:text-blue-700">Nico Pliquett</Link> and AI</span>
+          <span className="float-right">Made by <Link href="https://www.youtube.com/@NicoPliquettDE" target="_blank" className="text-blue-500 hover:text-blue-700">Nico Pliquett</Link> and AI: <Link href="https://github.com/NicoPli/ev-battery-sim" target="_blank" className="text-blue-500 hover:text-blue-700">GitHub</Link></span>
             <Link href="https://www.inspyra.me/impressum" target="_blank" className="text-blue-500 hover:text-blue-700">Impressum</Link>
           </div>
         </div>
