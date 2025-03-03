@@ -43,5 +43,8 @@ export const en = {
     capacity: "Capacity",
     string: "String",
     legend: "Legend"
+  },
+  footer: {
+    aiServices: "AI Image and Video Generation and AI Workflows"
   }
 }; 

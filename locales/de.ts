@@ -43,5 +43,8 @@ export const de = {
     capacity: "Kapazität",
     string: "Strang",
     legend: "Legende"
+  },
+  footer: {
+    aiServices: "KI Bild- und Videogenerierung und KI Workflows"
   }
 }; 

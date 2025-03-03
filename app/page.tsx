@@ -156,11 +156,12 @@ export default function Home() {
             onTimeAccelerationChange={handleTimeAccelerationChange}
           />
           </div>
-          <div>
-            Made by <Link href="https://www.youtube.com/@NicoPliquettDE" className="text-blue-500 hover:text-blue-700">Nico Pliquett</Link> and AI
+          <div className="mt-4 bg-gray-100 py-2 px-4 rounded-md">
+            {t.footer.aiServices}: <Link href="https://www.inspyra.me" target="_blank" className="text-blue-500 hover:text-blue-700">inspyra.me</Link>
           </div>
           <div className="text-sm mt-4">
-            <Link href="https://www.inspyra.me/impressum" className="text-blue-500 hover:text-blue-700">Impressum</Link>
+          <span className="float-right">Made by <Link href="https://www.youtube.com/@NicoPliquettDE" target="_blank" className="text-blue-500 hover:text-blue-700">Nico Pliquett</Link> and AI</span>
+            <Link href="https://www.inspyra.me/impressum" target="_blank" className="text-blue-500 hover:text-blue-700">Impressum</Link>
           </div>
         </div>
         
