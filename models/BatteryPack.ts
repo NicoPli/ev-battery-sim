@@ -1,20 +1,22 @@
-import { BatteryModule } from './BatteryModule';
+import { Cell } from './Cell';
 
 export class BatteryPack {
-  private _modules: BatteryModule[] = [];
+  private _cells: Cell[] = [];
   private _systemVoltage: number;
   private _maxCRate: number;
   private _coolingPower: number;
   private _maxCarPower: number | null;
-  private _cells: any[] = [];
-  private _seriesModules: number = 1;
-  private _parallelStrings: number = 1;
   private _limitingFactor: string | null = null;
   private _initialTemperature: number = 25;
   private _batteryHeatingEnabled: boolean = false;
+  private _cellsInSeries: number;
+  private _cellsInParallel: number;
+  private _balancingIntensity: number = 0;
+  private _avgSoc: number = 0;
+  private _cellsBalanced: number = 0;
 
   constructor(
-    moduleCount: number = 4,
+    batteryCapacityKWh: number = 80,
     systemVoltage: number = 400,
     maxCRate: number = 2,
     coolingPower: number = 1,
@@ -29,56 +31,58 @@ export class BatteryPack {
     this._initialTemperature = initialTemperature;
     this._batteryHeatingEnabled = batteryHeatingEnabled;
     
-    // For a 400V system with cells at ~3.7V nominal:
-    // 400V ÷ 3.7V ≈ 108 cells in series
-    // For an 800V system:
-    // 800V ÷ 3.7V ≈ 216 cells in series
+    const cellsInSeries400 = 108;
+    const cellsInSeries800 = 216; 
+
+    // Calculate cells in series based on voltage
+    this._cellsInSeries = systemVoltage === 400 ? cellsInSeries400 : cellsInSeries800;
     
-    // Configure modules based on system voltage
-    const cellsPerModule = 12; // Each module has 12 cells in series
-    const cellsInSeries = systemVoltage === 400 ? 108 : 216;
-    const modulesInSeries = Math.ceil(cellsInSeries / cellsPerModule);
+    // Create a sample cell to get its properties
+    const sampleCell = new Cell();
+    const cellEnergy = sampleCell.energy;
     
-    // Calculate how many parallel strings we can have
-    const parallelStrings = Math.max(1, Math.floor(moduleCount / modulesInSeries));
+    // Calculate total energy in Wh
+    const totalWh = batteryCapacityKWh * 1000;
     
-    // For 800V, we need to double the cells in series but maintain the same energy capacity
-    // by adjusting the number of cells in parallel
-    const cellsInParallel = systemVoltage === 400 ? 8 : 4; // Half the parallel cells for 800V to maintain same capacity
-    
-    // Create the modules in the correct configuration
-    for (let p = 0; p < parallelStrings; p++) {
-      for (let s = 0; s < modulesInSeries; s++) {
-        if (this._modules.length < moduleCount) {
-          this._modules.push(new BatteryModule(cellsPerModule, cellsInParallel, initialTemperature));
-        }
-      }
+    // Calculate total cells needed
+    const totalCellsNeeded = totalWh / cellEnergy;
+
+    let cellsInParallel800 = Math.floor(totalCellsNeeded / cellsInSeries800);
+
+    // Make sure cellsInParallel is always a multiple of 2 for easier visualization
+    // and to ensure it works well with both 400V and 800V
+    if (cellsInParallel800 % 2 !== 0) {
+      cellsInParallel800++;
     }
     
-    // Add any remaining modules to maintain the requested module count
-    while (this._modules.length < moduleCount) {
-      this._modules.push(new BatteryModule(cellsPerModule, cellsInParallel, initialTemperature));
+    if (systemVoltage === 400) {
+      this._cellsInParallel = cellsInParallel800*2;
+    } else {
+      this._cellsInParallel = cellsInParallel800;
     }
     
-    // Store the configuration for voltage calculation
-    this._seriesModules = modulesInSeries;
-    this._parallelStrings = parallelStrings;
-    
-    // Flatten cells for easier access
-    this._cells = this._modules.flatMap(module => module.cells);
-    
-    // Apply heating setting to all modules
+    // Create all cells
+    const totalCells = this._cellsInSeries * this._cellsInParallel;
+    for (let i = 0; i < totalCells; i++) {
+      this._cells.push(new Cell(0.0, initialTemperature));
+    }
+
+    // Apply heating setting to all cells if needed
     if (batteryHeatingEnabled) {
       this.enableHeating();
     }
   }
 
-  get modules(): BatteryModule[] {
-    return this._modules;
+  get cells(): Cell[] {
+    return this._cells;
   }
 
-  get cells(): any[] {
-    return this._cells;
+  get cellsInSeries(): number {
+    return this._cellsInSeries;
+  }
+
+  get cellsInParallel(): number {
+    return this._cellsInParallel;
   }
 
   get initialTemperature(): number {
@@ -91,41 +95,47 @@ export class BatteryPack {
 
   enableHeating(): void {
     this._batteryHeatingEnabled = true;
-    this._modules.forEach(module => {
-      module.heatingEnabled = true;
+    this._cells.forEach(cell => {
+      cell.heatingEnabled = true;
     });
   }
 
   disableHeating(): void {
     this._batteryHeatingEnabled = false;
-    this._modules.forEach(module => {
-      module.heatingEnabled = false;
+    this._cells.forEach(cell => {
+      cell.heatingEnabled = false;
     });
   }
 
   get totalVoltage(): number {
-    // For simplicity, let's calculate the voltage directly based on the system voltage
-    // and the current state of charge
+    // Calculate average voltage for each series group
+    let totalVoltage = 0;
     
-    // Get the average cell voltage across all cells
-    const avgCellVoltage = this._cells.reduce((sum, cell) => sum + cell.voltage, 0) / this._cells.length;
+    for (let s = 0; s < this._cellsInSeries; s++) {
+      let parallelGroupVoltage = 0;
+      
+      for (let p = 0; p < this._cellsInParallel; p++) {
+        const cellIndex = s + (p * this._cellsInSeries);
+        if (cellIndex < this._cells.length) {
+          parallelGroupVoltage += this._cells[cellIndex].voltage;
+        }
+      }
+      
+      // Average voltage of parallel cells
+      totalVoltage += parallelGroupVoltage / this._cellsInParallel;
+    }
     
-    // Calculate how many cells we need in series to achieve the system voltage
-    const cellsInSeries = this._systemVoltage === 400 ? 108 : 216;
-    
-    // Return the voltage based on cells in series
-    return avgCellVoltage * cellsInSeries;
+    return totalVoltage;
   }
 
   get totalCapacity(): number {
-    // Get the capacity of a single module
-    const moduleCapacity = this._modules[0].capacity;
-    
-    // Calculate effective parallel strings
-    const effectiveParallelStrings = this._modules.length / this._seriesModules;
-    
-    // Return the total capacity
-    return moduleCapacity * effectiveParallelStrings;
+    // Capacity is determined by cells
+    return this._cells[0].capacity * this._cells.length;
+  }
+
+  get totalEnergy(): number {
+    // Energy = Voltage * Capacity
+    return (this._cells[0].energy * this._cells.length);
   }
 
   get averageTemperature(): number {
@@ -137,23 +147,36 @@ export class BatteryPack {
   }
 
   get averageSoc(): number {
-    // Calculate the true average SoC based on the charge state of each cell
-    const totalCharge = this._cells.reduce((sum, cell) => sum + cell.stateOfCharge * cell.capacity, 0);
-    const totalCapacity = this._cells.reduce((sum, cell) => sum + cell.capacity, 0);
-    
-    // Return as percentage
-    return (totalCharge / totalCapacity) * 100;
+    return this._avgSoc;
   }
 
-  get needsBalancing(): boolean {
-    return this._modules.some(module => module.needsBalancing);
+  get cellsBalanced(): number {
+    return this._cellsBalanced;
+  }
+
+  calculateAvgValues(): void {
+    this.calculateAvgSoc();
+    this.countCellsBalanced();
+  }
+
+  calculateAvgSoc(): number {
+    // Calculate the true average SoC based on the charge state of each cell
+    const avgSoc = this._cells.reduce((sum, cell) => sum + cell.stateOfCharge, 0) / this._cells.length;
+    this._avgSoc = avgSoc * 100;
+    return this._avgSoc;
+  }
+
+  countCellsBalanced(): number {
+    const cellsBalanced = this._cells.filter(cell => cell.wasBalanced).length;
+    this._cellsBalanced = cellsBalanced;
+    return this._cellsBalanced;
   }
 
   calculateChargingCurrent(maxChargerCurrent: number): number {
     // Calculate all the limits
     
     // C-rate limit - increase the multiplier to allow higher charging rates
-    const cRateLimit = this._maxCRate * this.totalCapacity * 2; // Multiply by 2 for more realistic power levels
+    const cRateLimit = this._maxCRate * this.totalCapacity; // Multiply by 2 for more realistic power levels
     
     // Calculate maximum current based on power limit (if any)
     let powerLimit = Number.MAX_VALUE;
@@ -161,6 +184,38 @@ export class BatteryPack {
       powerLimit = (this._maxCarPower * 1000) / this.totalVoltage;
     }
     
+    // Calculate temperature limit - make it more gradual with earlier onset
+    let temperatureLimit = Number.MAX_VALUE;
+    
+    // Add cold temperature limit
+    let coldTemperatureLimit = Number.MAX_VALUE;
+    if (this.averageTemperature < 20) {
+      // Make the cold temperature limit more severe
+      const tempFactor = Math.max(0.02, Math.pow((Math.max(0,this.averageTemperature) + 5) / 20, 2));
+
+      // Apply a more dramatic curve to make the effect more noticeable
+      //const adjustedFactor = Math.pow(tempFactor, 1.5);
+      //coldTemperatureLimit = maxChargerCurrent * adjustedFactor;
+      coldTemperatureLimit = maxChargerCurrent * tempFactor;
+    } else {
+      if(this._batteryHeatingEnabled) {
+        this.disableHeating();
+      }
+    }
+    
+    // Hot temperature limit
+    if (this.maxTemperature > 40) {
+      // Create a more gradual reduction curve
+      const adjustedThreshold = 40
+      
+      if (this.maxTemperature > adjustedThreshold) {
+        const reductionFactor = Math.max(0, 1 - (this.maxTemperature - adjustedThreshold) / 25);
+        temperatureLimit = maxChargerCurrent * reductionFactor;
+      }
+    }
+
+    // Todo: Realistically SoC-Limit and Balancing are the same
+
     // Calculate SoC-based limit (charging curve tapers at high SoC)
     // This creates the characteristic charging curve where power drops at high SoC
     let socLimit = Number.MAX_VALUE;
@@ -174,51 +229,11 @@ export class BatteryPack {
       socLimit = maxChargerCurrent * Math.min(1, socFactor);
     }
     
-    // Calculate temperature limit - make it more gradual with earlier onset
-    let temperatureLimit = Number.MAX_VALUE;
-    
-    // Add cold temperature limit
-    let coldTemperatureLimit = Number.MAX_VALUE;
-    if (this.averageTemperature < 15) {
-      // Make the cold temperature limit more severe
-      // At 15°C: ~90% of current
-      // At 5°C: ~40% of current
-      // At -5°C: ~5% of current
-      const tempFactor = Math.max(0.05, (this.averageTemperature + 5) / 20);
-      
-      // Apply a more dramatic curve to make the effect more noticeable
-      const adjustedFactor = Math.pow(tempFactor, 1.5);
-      coldTemperatureLimit = maxChargerCurrent * adjustedFactor;
-      
-      // If heating is enabled, improve the limit somewhat
-      if (this._batteryHeatingEnabled) {
-        // Heating helps, but doesn't completely eliminate the cold effect
-        coldTemperatureLimit = Math.min(
-          maxChargerCurrent * 0.9, // Cap at 90% even with heating
-          coldTemperatureLimit * 2.5 // Heating improves limit by 2.5x
-        );
-      }
-    }
-    
-    // Hot temperature limit
-    if (this.maxTemperature > 40) {
-      // Create a more gradual reduction curve
-      // Make the temperature threshold higher when cooling power is higher
-      const coolingAdjustment = (this._coolingPower - 5) * 0.5;
-      const adjustedThreshold = 40 + coolingAdjustment;
-      
-      if (this.maxTemperature > adjustedThreshold) {
-        const reductionFactor = Math.max(0, 1 - (this.maxTemperature - adjustedThreshold) / 25);
-        temperatureLimit = maxChargerCurrent * reductionFactor;
-      }
-    }
-    
     // Calculate balancing limit - make it more significant
     let balancingLimit = Number.MAX_VALUE;
-    if (this.needsBalancing) {
+    if (this._balancingIntensity > 0) {
       // Make balancing limit more restrictive at higher SoC
-      const balancingFactor = this.averageSoc > 80 ? 0.5 : 0.8;
-      balancingLimit = maxChargerCurrent * balancingFactor;
+      balancingLimit = maxChargerCurrent * (1-this._balancingIntensity * 50);
     }
     
     // Return minimum of all limits
@@ -247,7 +262,6 @@ export class BatteryPack {
     return limitedCurrent;
   }
 
-  // Update the method to include cold temperature limit
   private determineLimitingFactor(
     limitedCurrent: number,
     chargerMax: number,
@@ -260,36 +274,85 @@ export class BatteryPack {
   ): string {
     const epsilon = 0.1; // Small tolerance for floating point comparison
     
-    if (Math.abs(limitedCurrent - chargerMax) < epsilon) return "Charger maximum";
-    if (Math.abs(limitedCurrent - cRateLimit) < epsilon) return "C-rate limit";
-    if (Math.abs(limitedCurrent - powerLimit) < epsilon) return "Car power limit";
-    if (Math.abs(limitedCurrent - tempLimit) < epsilon) return "Temperature limit (hot)";
-    if (Math.abs(limitedCurrent - coldTempLimit) < epsilon) return "Temperature limit (cold)";
+    if (Math.abs(limitedCurrent - chargerMax) < epsilon) return "Charger";
+    if (Math.abs(limitedCurrent - cRateLimit) < epsilon) return "C-rate";
+    if (Math.abs(limitedCurrent - powerLimit) < epsilon) return "Car";
+    if (Math.abs(limitedCurrent - tempLimit) < epsilon) return "Temperature (hot)";
+    if (Math.abs(limitedCurrent - coldTempLimit) < epsilon) return "Temperature (cold)";
     if (Math.abs(limitedCurrent - balancingLimit) < epsilon) return "Cell balancing";
-    if (Math.abs(limitedCurrent - socLimit) < epsilon) return "SoC limit";
+    if (Math.abs(limitedCurrent - socLimit) < epsilon) return "SoC";
     
     return "Unknown limit";
   }
 
-  // Add a getter for the limiting factor
   get limitingFactor(): string {
     return this._limitingFactor || "Not charging";
   }
 
   updateCharge(current: number, deltaTimeHours: number): void {
-    this._modules.forEach(module => {
-      module.updateCharge(current, deltaTimeHours);
-    });
+    // Distribute current among parallel cells
+    const currentPerParallelGroup = current / this._cellsInParallel;
+    
+    // Update each cell
+    for (let p = 0; p < this._cellsInParallel; p++) {
+      for (let s = 0; s < this._cellsInSeries; s++) {
+        const cellIndex = s + (p * this._cellsInSeries);
+        if (cellIndex < this._cells.length) {
+          this._cells[cellIndex].updateCharge(currentPerParallelGroup, deltaTimeHours);
+        }
+      }
+    }
+    
+    this.updateTemperature(current, deltaTimeHours);
+    // Perform cell balancing
+    this.balanceCells();
   }
 
   updateTemperature(current: number, deltaTimeHours: number): void {
-    this._modules.forEach(module => {
-      module.updateTemperature(current, deltaTimeHours, this._coolingPower);
-    });
+    // Distribute current among parallel cells
+    const currentPerParallelGroup = current / this._cellsInParallel;
+    
+    // Update each cell's temperature
+    for (let p = 0; p < this._cellsInParallel; p++) {
+      for (let s = 0; s < this._cellsInSeries; s++) {
+        const cellIndex = s + (p * this._cellsInSeries);
+        if (cellIndex < this._cells.length) {
+          this._cells[cellIndex].updateTemperature(currentPerParallelGroup, deltaTimeHours, this._coolingPower);
+        }
+      }
+    }
+  }
+
+  private balanceCells(): void {
+    // Find min and max SoC to determine if balancing is needed
+    const minSoc = Math.min(...this._cells.map(cell => cell.stateOfCharge));
+    const maxSoc = Math.max(...this._cells.map(cell => cell.stateOfCharge));
+
+    const limit = 0.1 - this.averageSoc / 1000;
+
+    // Only balance if the difference is significant
+    if (maxSoc - minSoc > limit) {
+      // Balance more aggressively at higher SoC
+      this._balancingIntensity = 0.002 * this._avgSoc * (maxSoc - minSoc);
+
+      // Balance cells by adjusting SoC towards average
+      this._cells.forEach(cell => {
+        if (cell.stateOfCharge * 100 > this._avgSoc + limit) {
+          // Reduce SoC of cells that are too high
+          cell.stateOfCharge = cell.stateOfCharge - this._balancingIntensity;
+          cell.wasBalanced = true;
+        } else {
+          cell.wasBalanced = false;
+        }
+      });
+
+    } else {
+      this._balancingIntensity = 0;
+    }
   }
 
   reset(): void {
-    this._modules.forEach(module => module.reset(this._initialTemperature));
+    this._cells.forEach(cell => cell.reset(this._initialTemperature));
     
     // Apply heating setting after reset
     if (this._batteryHeatingEnabled) {
@@ -311,7 +374,6 @@ export class BatteryPack {
     return this.maxCellVoltage - this.minCellVoltage;
   }
 
-  // Add a public getter for systemVoltage
   get systemVoltage(): number {
     return this._systemVoltage;
   }

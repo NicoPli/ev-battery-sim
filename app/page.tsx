@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import SimulationControls, { SimulationConfig } from '../components/SimulationControls';
 import BatteryVisualizer from '../components/BatteryVisualizer';
 import ChargingChart from '../components/ChargingChart';
-import SimulationStats from '../components/SimulationStats';
 import { BatteryPack } from '../models/BatteryPack';
 import { ChargingSimulation } from '../models/ChargingSimulation';
 
@@ -22,14 +21,14 @@ export default function Home() {
       chargerType: 'Supercharger',
       maxCRate: 2,
       coolingPower: 1,
-      moduleCount: 24,
+      batterySize: 80,
       maxCarPower: null,
       initialTemperature: 25,
       batteryHeatingEnabled: true
     };
     
     const batteryPack = new BatteryPack(
-      defaultConfig.moduleCount,
+      defaultConfig.batterySize,
       defaultConfig.systemVoltage,
       defaultConfig.maxCRate,
       defaultConfig.coolingPower,
@@ -72,7 +71,7 @@ export default function Home() {
     
     // Create new battery pack with updated config
     const batteryPack = new BatteryPack(
-      config.moduleCount,
+      config.batterySize,
       config.systemVoltage, 
       config.maxCRate,
       config.coolingPower,
@@ -111,6 +110,17 @@ export default function Home() {
     if (!simulationRef.current) return;
     simulationRef.current.reset();
   };
+
+  // Determine the current limiting factor
+  const getLimitingFactor = () => {
+    if (!simulationRef.current) return;
+    if (!simulationRef.current.isRunning) return "Not charging";
+    return simulationRef.current.batteryPack.limitingFactor || "Unknown";
+  };
+
+  const formatVoltage = (voltage: number | undefined): string => {
+    return voltage !== undefined ? voltage.toFixed(2) : "N/A";
+  };
   
   if (!simulation) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
@@ -138,10 +148,6 @@ export default function Home() {
             timeAcceleration={timeAcceleration}
             onTimeAccelerationChange={handleTimeAccelerationChange}
           />
-          </div>
-
-          <div className="">
-          {simulation && <SimulationStats simulation={simulation} />}
           </div>
         </div>
         
@@ -178,6 +184,44 @@ export default function Home() {
                   <span className="text-sm ml-1">
                     (Max: {batteryPack.maxTemperature.toFixed(1)}°C)
                   </span>
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm">Charging Limited by</p>
+                <p className="text-2xl font-bold">
+                  {getLimitingFactor()}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm">Battery Voltage</p>
+                <p className="text-2xl font-bold">
+                  {batteryPack.totalVoltage.toFixed(1)} V
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm">Current</p>
+                <p className="text-2xl font-bold">
+                  {latestDataPoint ? latestDataPoint.current.toFixed(1) : "0"} A
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm">Cell Voltage Range</p>
+                <p className="text-2xl font-bold">
+                {batteryPack && batteryPack.minCellVoltage !== undefined 
+              ? formatVoltage(batteryPack.minCellVoltage) 
+              : "N/A"} - 
+            {batteryPack && batteryPack.maxCellVoltage !== undefined 
+              ? formatVoltage(batteryPack.maxCellVoltage) 
+              : "N/A"} V
+            {batteryPack && batteryPack.voltageDifference !== undefined && (
+              <span className="text-sm ml-1">
+                (Δ{formatVoltage(batteryPack.voltageDifference)} V)
+              </span>
+            )}
                 </p>
               </div>
             </div>

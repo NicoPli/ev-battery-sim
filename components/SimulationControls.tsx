@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Cell } from '../models/Cell';
 
 export type SimulationConfig = {
   systemVoltage: number;
   chargerType: 'Supercharger' | 'Standard CCS';
   maxCRate: number;
   coolingPower: number;
-  moduleCount: number;
+  batterySize: number;
   maxCarPower: number | null;
   initialTemperature: number;
   batteryHeatingEnabled: boolean;
@@ -40,47 +39,12 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
   const [initialTemperature, setInitialTemperature] = useState<number>(25);
   const [batteryHeatingEnabled, setBatteryHeatingEnabled] = useState<boolean>(false);
   
-  // Get cell properties dynamically
-  const [cellProps, setCellProps] = useState({
-    voltage: 3.7,
-    capacity: 10
-  });
-  
-  useEffect(() => {
-    // Create a sample cell to get its properties
-    const sampleCell = new Cell();
-    setCellProps({
-      voltage: sampleCell.voltage, // This will use the getter
-      capacity: sampleCell.capacity
-    });
-  }, []);
-  
   // Auto-enable battery heating when temperature is low
   useEffect(() => {
     if (initialTemperature < 15) {
       setBatteryHeatingEnabled(true);
     }
   }, [initialTemperature]);
-  
-  // Calculate module count based on battery size and voltage
-  const calculateModuleCount = (capacityKWh: number, voltage: number) => {
-    // Use dynamically fetched cell properties
-    const cellVoltage = cellProps.voltage;
-    const cellCapacity = cellProps.capacity;
-    const cellsPerModule = voltage === 400 ? 108 : 216;
-    
-    // Calculate total energy in Wh
-    const totalWh = capacityKWh * 1000;
-    
-    // Calculate how many modules we need
-    const moduleEnergy = cellsPerModule * cellVoltage * cellCapacity; // Wh per module
-    const moduleCount = Math.round(totalWh / moduleEnergy);
-    
-    return Math.max(4, Math.min(32, moduleCount)); // Clamp between 4 and 32 modules
-  };
-  
-  // Get the current module count based on selected battery size and voltage
-  const moduleCount = calculateModuleCount(batterySize, systemVoltage);
   
   // Battery size options in kWh
   const batterySizeOptions = [40, 60, 80, 100, 120, 150, 200];
@@ -99,7 +63,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       chargerType,
       maxCRate,
       coolingPower,
-      moduleCount, // Use calculated module count
+      batterySize,
       maxCarPower,
       initialTemperature,
       batteryHeatingEnabled
@@ -117,7 +81,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       chargerType,
       maxCRate,
       coolingPower,
-      moduleCount,
+      batterySize,
       maxCarPower,
       initialTemperature,
       batteryHeatingEnabled
@@ -133,7 +97,6 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
   
   return (
     <div className="p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-4">Simulation Controls</h2>
       
       {/* Control buttons */}
       <div className="flex gap-2 mb-6">
@@ -233,7 +196,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       {/* Battery Size dropdown */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-1">
-          Battery Size ({batterySize} kWh, {moduleCount} modules)
+          Battery Size
         </label>
         <select 
           className="w-full p-2 border border-gray-300 rounded"
@@ -272,8 +235,8 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
         <input
           type="range"
           min="0.1"
-          max="20"
-          step="0.1"
+          max="50"
+          step="0.5"
           value={coolingPower}
           onChange={(e) => setCoolingPower(Number(e.target.value))}
           className="w-full"

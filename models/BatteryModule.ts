@@ -12,7 +12,7 @@ export class BatteryModule {
     
     // Create cells
     for (let i = 0; i < cellsInSeries * cellsInParallel; i++) {
-      this._cells.push(new Cell(0.0, 10, initialTemperature));
+      this._cells.push(new Cell(0.0, initialTemperature));
     }
   }
 

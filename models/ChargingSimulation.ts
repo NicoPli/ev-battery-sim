@@ -109,7 +109,7 @@ export class ChargingSimulation {
       this.step();
       
       // Stop if battery is fully charged
-      if (this._batteryPack.averageSoc >= 99.9) {
+      if (this._batteryPack.averageSoc >= 100) {
         this._isRunning = false;
         break;
       }
@@ -130,7 +130,8 @@ export class ChargingSimulation {
     
     // Update battery state
     this._batteryPack.updateCharge(current, deltaTimeHours);
-    this._batteryPack.updateTemperature(current, deltaTimeHours);
+
+    this._batteryPack.calculateAvgValues();
     
     // Calculate power in kW
     const voltage = this._batteryPack.totalVoltage;

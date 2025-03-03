@@ -27,9 +27,7 @@ const SimulationStats: React.FC<SimulationStatsProps> = ({ simulation }) => {
   const currentAmps = latestDataPoint ? latestDataPoint.current : 0;
   
   // Calculate battery size in kWh
-  const batteryCapacity = batteryPack.totalCapacity; // Ah
-  const systemVoltage = batteryPack.systemVoltage; // Use the public getter instead of private property
-  const batterySizeKWh = (batteryCapacity * systemVoltage) / 1000;
+  const batterySizeKWh = simulation.batteryPack.totalEnergy / 1000;
   
   // Calculate total number of cells
   const totalCells = batteryPack.cells ? batteryPack.cells.length : 0;

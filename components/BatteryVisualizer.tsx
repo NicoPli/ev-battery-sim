@@ -9,6 +9,7 @@ interface BatteryCell {
   temperature?: number;
   stateOfCharge?: number;
   heatingEnabled?: boolean;
+  wasBalanced?: boolean;
 }
 
 const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) => {
@@ -19,11 +20,11 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) =>
     return <div className="p-6 rounded-lg shadow-md">Loading battery data...</div>;
   }
 
-  // Safely access modules with optional chaining
-  const modules = batteryPack?.modules || [];
+  // Safely access cells
+  const cells = batteryPack?.cells || [];
   
-  if (modules.length === 0) {
-    return <div className="p-6 rounded-lg shadow-md">No battery modules available</div>;
+  if (cells.length === 0) {
+    return <div className="p-6 rounded-lg shadow-md">No battery cells available</div>;
   }
 
   const getTemperatureColor = (temp: number): string => {
@@ -40,25 +41,17 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) =>
   };
   
   const getVoltageColor = (soc: number): string => {
-    // Red (low) to green (high) gradient for voltage/SoC
     if (soc < 10) return 'bg-red-700';
-    if (soc < 20) return 'bg-red-500';
+    if (soc < 20) return 'bg-red-500'; 
+    if (soc < 30) return 'bg-red-300';
     if (soc < 40) return 'bg-orange-400';
+    if (soc < 50) return 'bg-orange-300';
     if (soc < 60) return 'bg-yellow-300';
+    if (soc < 70) return 'bg-yellow-200';
     if (soc < 80) return 'bg-green-300';
+    if (soc < 90) return 'bg-green-400';
     return 'bg-green-500';
   };
-  
-  // Calculate the number of modules to display per row
-  const modulesPerRow = Math.min(6, modules.length);
-  
-  // Group modules into rows
-  const moduleRows: Array<Array<typeof modules[0]>> = [];
-  const modulesCopy = [...modules];
-  
-  while (modulesCopy.length > 0) {
-    moduleRows.push(modulesCopy.splice(0, modulesPerRow));
-  }
   
   const toggleViewMode = () => {
     setViewMode(prev => prev === 'temperature' ? 'voltage' : 'temperature');
@@ -66,6 +59,25 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) =>
 
   // Check if battery heating is enabled
   const isHeatingEnabled = batteryPack.batteryHeatingEnabled;
+  
+  // Get the number of cells in series and parallel
+  const cellsInSeries = batteryPack.cellsInSeries;
+  const cellsInParallel = batteryPack.cellsInParallel;
+  
+  // Create a 2D array to represent the battery layout
+  // Each row represents a parallel string, each column a cell in series
+  const cellRows: Array<Array<BatteryCell>> = [];
+  
+  for (let p = 0; p < cellsInParallel; p++) {
+    const row: BatteryCell[] = [];
+    for (let s = 0; s < cellsInSeries; s++) {
+      const cellIndex = s + (p * cellsInSeries);
+      if (cellIndex < cells.length) {
+        row.push(cells[cellIndex]);
+      }
+    }
+    cellRows.push(row);
+  }
 
   return (
     <div className="p-6 rounded-lg shadow-md">
@@ -90,48 +102,38 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) =>
         )}
       </p>
       
-      <div className="flex flex-col gap-4">
-        {moduleRows.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-2 justify-center">
-            {row.map((module, moduleIndex) => {
-              const actualIndex = rowIndex * modulesPerRow + moduleIndex;
-              
-              // Get cells from the module with null check
-              const cells = module?.cells || [];
-              
-              // Calculate cells per row within a module
-              const cellsPerRow = Math.ceil(Math.sqrt(cells.length));
-              
-              return (
-                <div 
-                  key={moduleIndex} 
-                  className={`border border-gray-300 p-1 rounded ${isHeatingEnabled ? 'bg-amber-50' : ''}`}
-                  title={`Module ${actualIndex + 1}`}
-                >
-                  <div className="grid gap-0.5" style={{ 
-                    gridTemplateColumns: `repeat(${cellsPerRow || 1}, minmax(0, 1fr))` 
-                  }}>
-                    {cells.map((cell: BatteryCell, cellIndex: number) => (
-                      <div
-                        key={cellIndex}
-                        className={`w-2 h-2 rounded-sm ${
-                          viewMode === 'temperature'
-                            ? getTemperatureColor(cell?.temperature || 25)
-                            : getVoltageColor((cell?.stateOfCharge || 0) * 100)
-                        }`}
-                        title={`Cell ${cellIndex + 1}: ${
-                          viewMode === 'temperature'
-                            ? `${(cell?.temperature || 25).toFixed(1)}°C`
-                            : `${((cell?.stateOfCharge || 0) * 100).toFixed(1)}%`
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
+      <div className="mb-2 text-sm">
+        <span className="font-medium">Configuration: </span>
+        {cellsInSeries}S{cellsInParallel}P ({cells.length.toLocaleString()} cells)
+        <span className="ml-2 font-medium">Capacity: </span>
+        {(batteryPack.totalEnergy/1000).toFixed(1)} kWh
+        <span className="ml-2 font-medium">Cells Balanced: </span>
+        {batteryPack.cellsBalanced}
+      </div>
+      
+      <div className="border border-gray-200 rounded">
+        <div className={`p-2 ${isHeatingEnabled ? 'bg-amber-50' : ''}`}>
+          {cellRows.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex mb-0.5 whitespace-nowrap">
+              {row.map((cell, cellIndex) => (
+                <div
+                  key={cellIndex}
+                  className={`w-1.5 h-4 mx-px ${
+                    viewMode === 'temperature'
+                      ? getTemperatureColor(cell?.temperature || 25)
+                      : getVoltageColor((cell?.stateOfCharge || 0) * 100)
+                  } ${cell?.wasBalanced ? 'border-2 border-green-500' : ''}`}
+                  title={`Cell R${rowIndex+1}C${cellIndex+1}: ${
+                    viewMode === 'temperature'
+                      ? `${(cell?.temperature || 25).toFixed(1)}°C`
+                      : `${((cell?.stateOfCharge || 0) * 100).toFixed(1)}%`
+                  }`}
+                />
+              ))}
+              <span className="ml-2 text-xs text-gray-500">String {(rowIndex + 1).toString().padStart(2, '0')}</span>
+            </div>
+          ))}
+        </div>
       </div>
       
       {/* Legend */}
@@ -188,20 +190,36 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) =>
                 <span className="text-xs">10-20%</span>
               </div>
               <div className="flex items-center">
+                <div className="w-4 h-4 bg-red-300 rounded mr-1"></div>
+                <span className="text-xs">20-30%</span>
+              </div>
+              <div className="flex items-center">
                 <div className="w-4 h-4 bg-orange-400 rounded mr-1"></div>
-                <span className="text-xs">20-40%</span>
+                <span className="text-xs">30-40%</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-orange-300 rounded mr-1"></div>
+                <span className="text-xs">40-50%</span>
               </div>
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-yellow-300 rounded mr-1"></div>
-                <span className="text-xs">40-60%</span>
+                <span className="text-xs">50-60%</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-yellow-200 rounded mr-1"></div>
+                <span className="text-xs">60-70%</span>
               </div>
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-green-300 rounded mr-1"></div>
-                <span className="text-xs">60-80%</span>
+                <span className="text-xs">70-80%</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-green-400 rounded mr-1"></div>
+                <span className="text-xs">80-90%</span>
               </div>
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-green-500 rounded mr-1"></div>
-                <span className="text-xs">&gt;80%</span>
+                <span className="text-xs">&gt;90%</span>
               </div>
             </>
           )}
