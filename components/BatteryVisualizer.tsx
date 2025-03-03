@@ -109,6 +109,8 @@ const BatteryVisualizer: React.FC<BatteryVisualizerProps> = ({ batteryPack }) =>
         {cellsInSeries}S{cellsInParallel}P ({cells.length} cells)
         <span className="ml-2 font-medium">{t.visualization.capacity}: </span>
         {batteryPack.energyCapacityKWh.toFixed(1)} kWh
+        <span className="ml-2 font-medium">{t.visualization.cellsBalanced}: </span>
+        {batteryPack.cellsBalanced}
       </div>
       
       <div className="border border-gray-200 rounded">

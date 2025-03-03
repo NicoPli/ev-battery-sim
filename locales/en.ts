@@ -41,6 +41,7 @@ export const en = {
     batteryHeatingActive: "Battery Heating Active",
     configuration: "Configuration",
     capacity: "Capacity",
+    cellsBalanced: "Cells Balanced",
     string: "String",
     legend: "Legend"
   },
