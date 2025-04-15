@@ -157,11 +157,11 @@ export default function Home() {
           />
           </div>
           <div className="mt-4 bg-gray-100 py-2 px-4 rounded-md">
-            {t.footer.aiServices}: <Link href="https://www.inspyra.me" target="_blank" className="text-blue-500 hover:text-blue-700">inspyra.me</Link>
+            {t.footer.aiServices}: <Link href="https://www.inspyra.ai" target="_blank" className="text-blue-500 hover:text-blue-700">inspyra.ai</Link>
           </div>
           <div className="text-sm mt-4">
           <span className="float-right">Made by <Link href="https://www.youtube.com/@NicoPliquettDE" target="_blank" className="text-blue-500 hover:text-blue-700">Nico Pliquett</Link> and AI: <Link href="https://github.com/NicoPli/ev-battery-sim" target="_blank" className="text-blue-500 hover:text-blue-700">GitHub</Link></span>
-            <Link href="https://www.inspyra.me/impressum" target="_blank" className="text-blue-500 hover:text-blue-700">Impressum</Link>
+            <Link href="https://www.inspyra.ai/impressum" target="_blank" className="text-blue-500 hover:text-blue-700">Impressum</Link>
           </div>
         </div>
         
