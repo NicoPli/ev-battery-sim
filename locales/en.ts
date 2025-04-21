@@ -18,7 +18,8 @@ export const en = {
     enableHeating: "Enable Battery Heating",
     heatingHelps: "Heating helps warm the battery for faster charging in cold conditions",
     maxCarPower: "Max Car Power (kW)",
-    unlimited: "Unlimited"
+    unlimited: "Unlimited",
+    endPercentage: "End Percentage"
   },
   stats: {
     elapsedTime: "Elapsed Time",

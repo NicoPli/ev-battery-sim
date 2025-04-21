@@ -22,6 +22,7 @@ export class ChargingSimulation {
   private _chargerMaxCurrent: number;
   private _lastUpdateTime: number = 0;
   private _fullPointSoC: number = 0;
+  private _endPercentage: number = 100;
 
   constructor(batteryPack: BatteryPack, chargerType: ChargerType = 'Supercharger') {
     this._batteryPack = batteryPack;
@@ -60,6 +61,10 @@ export class ChargingSimulation {
     return this._dataPoints;
   }
 
+  get endPercentage(): number {
+    return this._endPercentage;
+  }
+
   setTimeAcceleration(acceleration: number): void {
     this._timeAcceleration = acceleration;
     
@@ -68,6 +73,10 @@ export class ChargingSimulation {
       this.stop();
       this.start();
     }
+  }
+
+  setEndPercentage(percentage: number): void {
+    this._endPercentage = percentage;
   }
 
   start(): void {
@@ -124,8 +133,8 @@ export class ChargingSimulation {
     for (let i = 0; i < stepsToRun; i++) {
       this.step();
       
-      // Stop if battery is fully charged
-      if (this._batteryPack.averageSoc >= 100) {
+      // Stop if battery reaches the end percentage
+      if (this._batteryPack.averageSoc >= this._endPercentage) {
         this._isRunning = false;
         break;
       }
@@ -146,7 +155,7 @@ export class ChargingSimulation {
     
     // Update battery state
     this._batteryPack.updateCharge(current, deltaTimeHours);
-
+    this._batteryPack.updateTemperature(current, deltaTimeHours);
     this._batteryPack.calculateAvgValues();
     
     // Calculate power in kW
@@ -161,7 +170,8 @@ export class ChargingSimulation {
         power,
         current,
         voltage,
-        temperature: this._batteryPack.averageTemperature
+        temperature: this._batteryPack.averageTemperature,
+        heatingEnabled: this._batteryPack.batteryHeatingEnabled
       });
       
       this._fullPointSoC++;

@@ -10,6 +10,7 @@ export type SimulationConfig = {
   maxCarPower: number | null;
   initialTemperature: number;
   batteryHeatingEnabled: boolean;
+  endPercentage: number;
 };
 
 interface SimulationControlsProps {
@@ -35,11 +36,12 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
   const [systemVoltage, setSystemVoltage] = useState<number>(400);
   const [chargerType, setChargerType] = useState<'Supercharger' | 'Standard CCS'>('Supercharger');
   const [maxCRate, setMaxCRate] = useState<number>(2);
-  const [coolingPower, setCoolingPower] = useState<number>(5);
+  const [coolingPower, setCoolingPower] = useState<number>(1);
   const [batterySize, setBatterySize] = useState<number>(80); // Store battery size in kWh
   const [maxCarPower, setMaxCarPower] = useState<number | null>(null);
   const [initialTemperature, setInitialTemperature] = useState<number>(25);
   const [batteryHeatingEnabled, setBatteryHeatingEnabled] = useState<boolean>(false);
+  const [endPercentage, setEndPercentage] = useState<number>(100);
   
   // Auto-enable battery heating when temperature is low, but only once
   useEffect(() => {
@@ -71,6 +73,7 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
       maxCarPower,
       initialTemperature,
       batteryHeatingEnabled,
+      endPercentage,
       ...config
     };
     
@@ -129,6 +132,12 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
     const newPower = value >= 350 ? null : value;
     setMaxCarPower(newPower);
     applyConfigChanges({ maxCarPower: newPower });
+  };
+  
+  // Handle end percentage change
+  const handleEndPercentageChange = (value: number) => {
+    setEndPercentage(value);
+    applyConfigChanges({ endPercentage: value });
   };
   
   return (
@@ -268,9 +277,9 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
         </label>
         <input
           type="range"
-          min="0.1"
+          min="0"
           max="50"
-          step="0.5"
+          step="1"
           value={coolingPower}
           onChange={(e) => handleCoolingPowerChange(Number(e.target.value))}
           className="w-full"
@@ -331,6 +340,22 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({
           step="10"
           value={maxCarPower === null ? 350 : maxCarPower}
           onChange={(e) => handleMaxCarPowerChange(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+      
+      {/* End Percentage */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">
+          {t.battery.endPercentage}: {endPercentage}%
+        </label>
+        <input
+          type="range"
+          min="50"
+          max="100"
+          step="1"
+          value={endPercentage}
+          onChange={(e) => handleEndPercentageChange(Number(e.target.value))}
           className="w-full"
         />
       </div>

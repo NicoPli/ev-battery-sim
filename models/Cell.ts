@@ -82,11 +82,10 @@ export class Cell {
     
     // Each cell has a significantly different charging efficiency
     // This creates more pronounced imbalance over time
-    const chargingEfficiency = this._chargingEfficiency * (0.95 + this._randomFactor * 0.10);
+    const chargingEfficiency = this._chargingEfficiency + (this._randomFactor * 0.1);
     
     // Calculate charge added (in Ah)
     const chargeAdded = effectiveCurrent * chargingEfficiency;
-    
     // Calculate new charge level
     const newCharge = this._charge + chargeAdded * deltaTimeHours;
     
@@ -95,12 +94,6 @@ export class Cell {
     
     // Update state of charge
     this._stateOfCharge = this._charge / this._capacity;
-    
-    // Ensure SoC doesn't exceed 1.0 (100%)
-    if (this._stateOfCharge > 1.0) {
-      this._stateOfCharge = 1.0;
-      this._charge = this._capacity;
-    }
   }
 
   updateTemperature(current: number, deltaTimeHours: number, cooling: number): void {
@@ -118,10 +111,10 @@ export class Cell {
 
       // More reasonable current effect
       const heatGenerated = Math.pow(current, 2) * effectiveResistance;
-      
+
       // Apply random factor to heating with moderate variation
       const effectiveHeat = heatGenerated * ( (0.95 + this._randomFactor * 0.1) + 0.2);
-      
+
       // Temperature rise (simplified model)
       tempChange.tempRise = effectiveHeat * 0.7;
     }
@@ -144,7 +137,7 @@ export class Cell {
                           tempChange.heatingPower + 
                           tempChange.coolingEffect + 
                           tempChange.ambientEffect;
-    
+
     this._temperature += totalTempChange  * deltaTimeHours;
 
     //console.log('tempChange', tempChange,totalTempChange);

@@ -18,7 +18,8 @@ export const de = {
     enableHeating: "Batterieheizung aktivieren",
     heatingHelps: "Die Heizung hilft, die Batterie für schnelleres Laden bei kalten Bedingungen zu erwärmen",
     maxCarPower: "Max. Fahrzeugleistung (kW)",
-    unlimited: "Unbegrenzt"
+    unlimited: "Unbegrenzt",
+    endPercentage: "Endprozentsatz"
   },
   stats: {
     elapsedTime: "Verstrichene Zeit",

@@ -27,7 +27,8 @@ export default function Home() {
       batterySize: 80,
       maxCarPower: null,
       initialTemperature: 25,
-      batteryHeatingEnabled: true
+      batteryHeatingEnabled: true,
+      endPercentage: 100
     };
     
     const batteryPack = new BatteryPack(
@@ -42,6 +43,7 @@ export default function Home() {
     
     const sim = new ChargingSimulation(batteryPack, defaultConfig.chargerType);
     sim.setTimeAcceleration(timeAcceleration);
+    sim.setEndPercentage(defaultConfig.endPercentage);
     
     simulationRef.current = sim;
     setSimulation(sim);
@@ -86,6 +88,7 @@ export default function Home() {
     // Create new simulation with updated battery pack
     const newSimulation = new ChargingSimulation(batteryPack, config.chargerType);
     newSimulation.setTimeAcceleration(timeAcceleration);
+    newSimulation.setEndPercentage(config.endPercentage);
     
     // Update both the ref and the state
     simulationRef.current = newSimulation;

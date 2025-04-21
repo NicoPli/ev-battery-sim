@@ -162,8 +162,17 @@ export class BatteryPack {
   }
 
   calculateAvgSoc(): number {
-    // Calculate the true average SoC based on the charge state of each cell
-    const avgSoc = this._cells.reduce((sum, cell) => sum + cell.stateOfCharge, 0) / this._cells.length;
+    // Calculate the true average SoC based on the total energy content
+    let totalEnergy = 0;
+    let totalCapacity = 0;
+    
+    for (let i = 0; i < this._cells.length; i++) {
+      const cell = this._cells[i];
+      totalEnergy += cell.stateOfCharge * cell.capacity * cell.voltage;
+      totalCapacity += cell.capacity * cell.voltage;
+    }
+    
+    const avgSoc = totalEnergy / totalCapacity;
     this._avgSoc = avgSoc * 100;
     return this._avgSoc;
   }
@@ -177,8 +186,9 @@ export class BatteryPack {
   calculateChargingCurrent(maxChargerCurrent: number): number {
     // Calculate all the limits
     
-    // C-rate limit - increase the multiplier to allow higher charging rates
-    const cRateLimit = this._maxCRate * this.totalCapacity; // Multiply by 2 for more realistic power levels
+    // C-rate limit - 1C means the battery will be fully charged in 1 hour
+    // For example, if battery capacity is 100 kWh and C-rate is 1, max power is 100 kW
+    const cRateLimit = (this._maxCRate * this.energyCapacityKWh * 1000) / this.totalVoltage;
     
     // Calculate maximum current based on power limit (if any)
     let powerLimit = Number.MAX_VALUE;
@@ -293,7 +303,7 @@ export class BatteryPack {
 
   updateCharge(current: number, deltaTimeHours: number): void {
     // Distribute current among parallel cells
-    const currentPerParallelGroup = current / this._cellsInParallel;
+    const currentPerParallelGroup = (current) / this._cellsInParallel;
     
     // Update each cell
     for (let p = 0; p < this._cellsInParallel; p++) {
@@ -312,8 +322,8 @@ export class BatteryPack {
 
   updateTemperature(current: number, deltaTimeHours: number): void {
     // Distribute current among parallel cells
-    const currentPerParallelGroup = current / this._cellsInParallel;
-    
+    const currentPerParallelGroup = (current) / this._cellsInParallel;
+
     // Update each cell's temperature
     for (let p = 0; p < this._cellsInParallel; p++) {
       for (let s = 0; s < this._cellsInSeries; s++) {
