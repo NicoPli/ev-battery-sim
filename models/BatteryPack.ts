@@ -29,7 +29,6 @@ export class BatteryPack {
     this._coolingPower = coolingPower;
     this._maxCarPower = maxCarPower;
     this._initialTemperature = initialTemperature;
-    this._batteryHeatingEnabled = false;
     
     const cellsInSeries400 = 108;
     const cellsInSeries800 = 216; 
