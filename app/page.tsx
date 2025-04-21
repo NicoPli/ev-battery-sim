@@ -27,7 +27,7 @@ export default function Home() {
       batterySize: 80,
       maxCarPower: null,
       initialTemperature: 25,
-      batteryHeatingEnabled: true,
+      batteryHeatingEnabled: false,
       endPercentage: 100
     };
     
