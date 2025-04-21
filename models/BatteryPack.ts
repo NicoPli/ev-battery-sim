@@ -1,5 +1,24 @@
 import { Cell } from './Cell';
 
+interface BatteryPackOptions {
+  batteryCapacityKWh?: number;
+  systemVoltage?: number;
+  maxCRate?: number;
+  coolingPower?: number;
+  maxCarPower?: number | null;
+  initialTemperature?: number;
+  batteryHeatingEnabled?: boolean;
+}
+
+const DEFAULT_OPTIONS = {
+  limitingFactor: null,
+  initialTemperature: 25,
+  batteryHeatingEnabled: false,
+  balancingIntensity: 0,
+  avgSoc: 0,
+  cellsBalanced: 0,
+}
+
 export class BatteryPack {
   private _cells: Cell[] = [];
   private _systemVoltage: number;
@@ -7,23 +26,23 @@ export class BatteryPack {
   private _coolingPower: number;
   private _maxCarPower: number | null;
   private _limitingFactor: string | null = null;
-  private _initialTemperature: number = 25;
-  private _batteryHeatingEnabled: boolean = false;
+  private _initialTemperature: number = DEFAULT_OPTIONS.initialTemperature;
+  private _batteryHeatingEnabled: boolean = DEFAULT_OPTIONS.batteryHeatingEnabled;
   private _cellsInSeries: number;
   private _cellsInParallel: number;
-  private _balancingIntensity: number = 0;
-  private _avgSoc: number = 0;
-  private _cellsBalanced: number = 0;
+  private _balancingIntensity: number = DEFAULT_OPTIONS.balancingIntensity;
+  private _avgSoc: number = DEFAULT_OPTIONS.avgSoc;
+  private _cellsBalanced: number = DEFAULT_OPTIONS.cellsBalanced;
 
-  constructor(
-    batteryCapacityKWh: number = 80,
-    systemVoltage: number = 400,
-    maxCRate: number = 2,
-    coolingPower: number = 1,
-    maxCarPower: number | null = null,
-    initialTemperature: number = 25,
-    batteryHeatingEnabled: boolean = false
-  ) {
+  constructor({
+    batteryCapacityKWh = 80,
+    systemVoltage = 400,
+    maxCRate = 2,
+    coolingPower = 1,
+    maxCarPower = null,
+    initialTemperature = DEFAULT_OPTIONS.initialTemperature,
+    batteryHeatingEnabled = DEFAULT_OPTIONS.batteryHeatingEnabled,
+  }: BatteryPackOptions) {
     this._systemVoltage = systemVoltage;
     this._maxCRate = maxCRate;
     this._coolingPower = coolingPower;
@@ -367,8 +386,12 @@ export class BatteryPack {
     // Reset all cells to initial state
     this._cells.forEach(cell => {
       cell.reset(this._initialTemperature);
-      cell.stateOfCharge = 0.0; // Explicitly set SoC to 0
     });
+    
+    this._limitingFactor = DEFAULT_OPTIONS.limitingFactor;
+    this._balancingIntensity = DEFAULT_OPTIONS.balancingIntensity;
+    this._avgSoc = DEFAULT_OPTIONS.avgSoc;
+    this._cellsBalanced = DEFAULT_OPTIONS.cellsBalanced;
     
     // Apply heating setting after reset
     if (this._batteryHeatingEnabled) {
