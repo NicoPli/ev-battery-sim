@@ -96,16 +96,15 @@ export class ChargingSimulation {
   }
 
   reset(): void {
-    // Reset the battery pack
+    this.stop();
+    this._elapsedTime = 0;
+    this._fullPointSoC = 0;
+    this._lastUpdateTime = 0;
+    
     this._batteryPack.reset();
     
     // Clear all data points
     this._dataPoints = [];
-    
-    // Reset elapsed time
-    this._elapsedTime = 0;
-    
-    // Add initial data point at 0% SoC
     this._dataPoints.push({
       time: 0,
       soc: this._batteryPack.averageSoc,
