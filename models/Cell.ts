@@ -78,7 +78,7 @@ export class Cell {
 
   updateCharge(current: number, deltaTimeHours: number): void {
     // Apply temperature-based charging limitation
-    let effectiveCurrent = current;
+    const effectiveCurrent = current;
     
     // Each cell has a significantly different charging efficiency
     // This creates more pronounced imbalance over time
@@ -150,8 +150,11 @@ export class Cell {
 
   reset(initialTemperature: number = 25): void {
     this._temperature = initialTemperature;
-    this._stateOfCharge = 0.1;
+    this._ambientTemperature = initialTemperature;
+    this._stateOfCharge = 0.0;
+    this._charge = this._stateOfCharge * this._capacity;
     this._heatingEnabled = false;
+    this._wasBalanced = false;
   }
 
   private updateVoltage(): void {

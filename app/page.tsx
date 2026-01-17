@@ -31,15 +31,15 @@ export default function Home() {
       endPercentage: 100
     };
     
-    const batteryPack = new BatteryPack(
-      defaultConfig.batterySize,
-      defaultConfig.systemVoltage,
-      defaultConfig.maxCRate,
-      defaultConfig.coolingPower,
-      defaultConfig.maxCarPower,
-      defaultConfig.initialTemperature,
-      defaultConfig.batteryHeatingEnabled
-    );
+    const batteryPack = new BatteryPack({
+      batteryCapacityKWh: defaultConfig.batterySize,
+      systemVoltage: defaultConfig.systemVoltage,
+      maxCRate: defaultConfig.maxCRate,
+      coolingPower: defaultConfig.coolingPower,
+      maxCarPower: defaultConfig.maxCarPower,
+      initialTemperature:defaultConfig.initialTemperature,
+      batteryHeatingEnabled: defaultConfig.batteryHeatingEnabled
+    });
     
     const sim = new ChargingSimulation(batteryPack, defaultConfig.chargerType);
     sim.setTimeAcceleration(timeAcceleration);
@@ -75,15 +75,15 @@ export default function Home() {
     }
     
     // Create new battery pack with updated config
-    const batteryPack = new BatteryPack(
-      config.batterySize,
-      config.systemVoltage, 
-      config.maxCRate,
-      config.coolingPower,
-      config.maxCarPower,
-      config.initialTemperature,
-      config.batteryHeatingEnabled
-    );
+    const batteryPack = new BatteryPack({
+      batteryCapacityKWh: config.batterySize,
+      systemVoltage: config.systemVoltage,
+      maxCRate: config.maxCRate,
+      coolingPower: config.coolingPower,
+      maxCarPower: config.maxCarPower,
+      initialTemperature: config.initialTemperature,
+      batteryHeatingEnabled: config.batteryHeatingEnabled,
+    });
     
     // Create new simulation with updated battery pack
     const newSimulation = new ChargingSimulation(batteryPack, config.chargerType);
